@@ -34,10 +34,10 @@ These systems are part of the clean-room prototype and are still being balanced.
 - Technology progression unlocks improved tool use (faster gathering) and expanded storage capacity.
 
 - Game state is serialized locally and restored automatically on launch; progress is autosaved during play and when the game surface closes.
-- Touchscreen action panel supports constructing huts, woodcamps, quarries and watchtowers, plus recruiting guards; actions validate costs and save immediately.
+- Touchscreen action panel supports huts, granaries, woodcamps, quarries, hunter camps, watchtowers, bonfires, palisades and guard recruitment; actions validate costs and save immediately.
 
 
 ### Оборона поселения
 - Стражники автоматически преследуют ближайших налётчиков в радиусе обнаружения и возвращаются к поселению, если врагов рядом нет.
-- Налётчики, добравшиеся до внешней линии обороны, сначала атакуют ближайший участок частокола; после пролома продолжают атаковать постройки.
+- Налётчики выбирают ближайший целый участок частокола, идут к нему и атакуют его; после разрушения переходят к следующему участку, а затем к постройкам.
 - Повреждённые участки частокола отображают шкалу прочности и могут быть восстановлены строителем.
