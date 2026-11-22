@@ -208,6 +208,19 @@ private class WorldRenderer {
                 p.color=0x558dc5c5
                 c.drawLine(cx-8f,cy-1f,cx+5f,cy-1f,p)
                 if((x+y)%3==0)c.drawLine(cx-2f,cy+3f,cx+9f,cy+3f,p)
+                p.color=0x2248a2b0
+                if((x*3+y)%4==0)c.drawLine(cx-14f,cy+2f,cx-7f,cy+2f,p)
+            } else if(world.tiles[y][x].ground==Ground.GRASS || world.tiles[y][x].ground==Ground.DARK_GRASS) {
+                // Small deterministic grass strokes give the ground texture without noisy flicker.
+                p.color=if((x+y)%2==0)0x557da653 else 0x44506f3b
+                val gx=cx+((x*13+y*7)%19-9)
+                val gy=cy+((x*5+y*11)%7-3)
+                c.drawLine(gx,gy,gx-1.5f,gy-3f,p)
+                c.drawLine(gx,gy,gx+2f,gy-2.5f,p)
+                if((x*5+y*3)%7==0) {
+                    p.color=0x558fae61
+                    c.drawCircle(cx+11f,cy-2f,1.1f,p)
+                }
             }
         }
     }
@@ -234,13 +247,25 @@ private class WorldRenderer {
     }
 
     private fun drawTree(c:Canvas,x:Float,y:Float,pine:Boolean,health:Float) {
-        p.color=0x5533281d; c.drawOval(x-9f,y-1f,x+10f,y+6f,p)
-        p.color=0xff59432c.toInt(); c.drawRoundRect(x-3f,y-19f,x+3f,y+3f,2f,2f,p)
+        p.color=0x6633281d; c.drawOval(x-11f,y-1f,x+12f,y+7f,p)
+        p.color=0xff493724.toInt(); c.drawRoundRect(x-3.5f,y-20f,x+3.5f,y+4f,2f,2f,p)
+        p.color=0xff89613b.toInt()
+        c.drawLine(x-1f,y-14f,x-7f,y-20f,p); c.drawLine(x+1f,y-12f,x+7f,y-19f,p)
         val r=14f*health
-        p.color=if(pine)0xff315c38.toInt() else 0xff47763c.toInt()
-        c.drawCircle(x,y-23f,r,p); c.drawCircle(x-8f,y-18f,r*.68f,p); c.drawCircle(x+8f,y-17f,r*.7f,p)
-        p.color=0x447fa65a; c.drawCircle(x-4f,y-28f,r*.42f,p)
-        if(!pine) { p.color=0xff648c46.toInt(); c.drawCircle(x+4f,y-26f,r*.42f,p) }
+        if(pine) {
+            p.color=0xff294e34.toInt()
+            val crown=Path().apply { moveTo(x,y-48f*health); lineTo(x-13f*health,y-19f); lineTo(x+13f*health,y-19f); close() }
+            c.drawPath(crown,p)
+            p.color=0xff3d7040.toInt()
+            val crown2=Path().apply { moveTo(x,y-40f*health); lineTo(x-11f*health,y-12f); lineTo(x+11f*health,y-12f); close() }
+            c.drawPath(crown2,p)
+            p.color=0xff6f9550.toInt(); c.drawLine(x,y-42f*health,x-5f,y-23f,p)
+        } else {
+            p.color=0xff315b37.toInt(); c.drawCircle(x,y-23f,r,p)
+            p.color=0xff47763c.toInt(); c.drawCircle(x-8f,y-18f,r*.68f,p); c.drawCircle(x+8f,y-17f,r*.7f,p)
+            p.color=0xff648c46.toInt(); c.drawCircle(x-4f,y-28f,r*.42f,p); c.drawCircle(x+7f,y-24f,r*.34f,p)
+            p.color=0xff8da85a.toInt(); c.drawCircle(x-7f,y-28f,2.2f*health,p); c.drawCircle(x+5f,y-20f,1.8f*health,p)
+        }
     }
     private fun drawRock(c:Canvas,x:Float,y:Float) {
         p.color=0x55332922; c.drawOval(x-11f,y-1f,x+11f,y+5f,p)
@@ -298,24 +323,36 @@ private class WorldRenderer {
     }
     private fun drawHut(c:Canvas,x:Float,y:Float,s:Float) {
         c.save();c.translate(x,y);c.scale(s,s)
-        p.color=0x5533261b;c.drawOval(-27f,-2f,27f,8f,p)
-        p.color=0xff8a6139.toInt();c.drawRect(-20f,-23f,20f,3f,p)
-        val roof=Path().apply{moveTo(-27f,-20f);lineTo(0f,-46f);lineTo(27f,-20f);close()}
+        p.color=0x6633261b;c.drawOval(-29f,-2f,29f,9f,p)
+        // Woven timber walls with upright corner posts.
+        p.color=0xff765033.toInt();c.drawRect(-20f,-23f,20f,3f,p)
+        p.color=0xffa47a49.toInt()
+        c.drawRect(-20f,-23f,-15f,3f,p); c.drawRect(15f,-23f,20f,3f,p)
+        p.color=0xffc0955c.toInt()
+        for(row in -18..-2 step 6)c.drawLine(-14f,row.toFloat(),14f,row.toFloat(),p)
+        p.color=0xff5b3d29.toInt();c.drawRect(-5f,-15f,5f,3f,p)
+        p.color=0xffd4b178.toInt();c.drawLine(-27f,-20f,0f,-47f,p);c.drawLine(0f,-47f,27f,-20f,p)
+        val roof=Path().apply{moveTo(-27f,-20f);lineTo(0f,-47f);lineTo(27f,-20f);lineTo(20f,-17f);lineTo(0f,-39f);lineTo(-20f,-17f);close()}
         p.color=0xffa87948.toInt();c.drawPath(roof,p)
-        p.color=0xffd0a96a.toInt();c.drawLine(-20f,-20f,0f,-40f,p);c.drawLine(0f,-40f,20f,-20f,p)
-        p.color=0xff523a29.toInt();c.drawRect(-5f,-15f,5f,3f,p)
+        p.color=0xffd0a96a.toInt()
+        for(i in -2..2)c.drawLine(i*7f,-24f,i*7f+3f,-29f,p)
         p.color=0xffc4a06a.toInt();c.drawLine(-19f,-3f,19f,-3f,p)
         c.restore()
     }
     private fun drawGreatHall(c:Canvas,x:Float,y:Float) {
-        p.color=0x6633281e;c.drawOval(x-36f,y-3f,x+36f,y+9f,p)
-        p.color=0xff775035.toInt();c.drawRect(x-28f,y-31f,x+28f,y+4f,p)
-        val roof=Path().apply{moveTo(x-35f,y-29f);lineTo(x,y-61f);lineTo(x+35f,y-29f);close()}
-        p.color=0xffb68a4f.toInt();c.drawPath(roof,p)
-        p.color=0xffd2ad70.toInt();c.drawLine(x-27f,y-29f,x,y-55f,p);c.drawLine(x,y-55f,x+27f,y-29f,p)
-        p.color=0xff493426.toInt();c.drawRect(x-7f,y-21f,x+7f,y+4f,p)
+        p.color=0x7733281e;c.drawOval(x-39f,y-3f,x+39f,y+10f,p)
+        p.color=0xff68482f.toInt();c.drawRect(x-29f,y-31f,x+29f,y+4f,p)
+        p.color=0xff9a7045.toInt()
+        for(i in -2..2)c.drawRect(x+i*10f-2f,y-30f,x+i*10f+2f,y+3f,p)
+        p.color=0xffb68a4f.toInt()
+        val roof=Path().apply{moveTo(x-37f,y-29f);lineTo(x,y-64f);lineTo(x+37f,y-29f);lineTo(x+29f,y-25f);lineTo(x,y-55f);lineTo(x-29f,y-25f);close()}
+        c.drawPath(roof,p)
+        p.color=0xffd2ad70.toInt()
+        for(i in -3..3)c.drawLine(x+i*8f,y-30f,x+i*4f,y-54f,p)
+        p.color=0xff493426.toInt();c.drawRect(x-8f,y-22f,x+8f,y+4f,p)
         p.color=0xffd9bc85.toInt();c.drawRect(x-31f,y+1f,x+31f,y+4f,p)
-        p.color=0xffe7d5a8.toInt();c.drawCircle(x,y-39f,3f,p)
+        p.color=0xffe7d5a8.toInt();c.drawCircle(x,y-41f,3f,p)
+        p.color=0xff5b3c28.toInt();c.drawRect(x-31f,y-5f,x-27f,y+3f,p);c.drawRect(x+27f,y-5f,x+31f,y+3f,p)
     }
     private fun drawGranary(c:Canvas,x:Float,y:Float) {
         p.color=0x5533261b;c.drawOval(x-20f,y,x+20f,y+6f,p)
@@ -344,11 +381,19 @@ private class WorldRenderer {
         p.color=0xff8d6b45.toInt();c.drawLine(x-10f,y-8f,x+10f,y-8f,p)
     }
     private fun drawTower(c:Canvas,x:Float,y:Float) {
-        p.color=0x5533261b;c.drawOval(x-17f,y,x+17f,y+6f,p)
-        p.color=0xff805b39.toInt();c.drawRect(x-12f,y-39f,x+12f,y+2f,p)
-        p.color=0xffbd9257.toInt();c.drawRect(x-17f,y-43f,x+17f,y-36f,p)
-        p.color=0xff573b28.toInt();c.drawRect(x-3f,y-28f,x+3f,y-18f,p)
-        p.color=0xffd6b77d.toInt();c.drawLine(x-10f,y-35f,x+10f,y-35f,p)
+        p.color=0x6633261b;c.drawOval(x-19f,y,x+19f,y+7f,p)
+        p.color=0xff68482f.toInt();c.drawRect(x-13f,y-39f,x+13f,y+3f,p)
+        p.color=0xff9a7045.toInt()
+        for(i in -1..1)c.drawRect(x+i*8f-1.5f,y-37f,x+i*8f+1.5f,y+1f,p)
+        p.color=0xffbd9257.toInt();c.drawRect(x-18f,y-44f,x+18f,y-36f,p)
+        p.color=0xffd6b77d.toInt();c.drawLine(x-14f,y-35f,x+14f,y-35f,p)
+        p.color=0xff573b28.toInt();c.drawRect(x-4f,y-28f,x+4f,y-17f,p)
+        // Small ladder on the front face.
+        p.color=0xffc49a61.toInt();c.drawLine(x-8f,y-2f,x-8f,y-28f,p);c.drawLine(x-2f,y-2f,x-2f,y-28f,p)
+        for(i in 0..4)c.drawLine(x-8f,y-5f-i*5f,x-2f,y-5f-i*5f,p)
+        p.color=0xff8e3c31.toInt();c.drawLine(x+12f,y-43f,x+12f,y-62f,p)
+        val flag=Path().apply{moveTo(x+12f,y-62f);lineTo(x+27f,y-57f);lineTo(x+12f,y-51f);close()}
+        c.drawPath(flag,p)
     }
     private fun drawFire(c:Canvas,x:Float,y:Float,t:Float) {
         p.color=0x6633281d;c.drawOval(x-17f,y,x+17f,y+7f,p)
@@ -384,21 +429,34 @@ private class WorldRenderer {
     }
     private fun drawPerson(c:Canvas,x:Float,y:Float,phase:Float,enemy:Boolean,role:Role,hp:Float) {
         val bob=sin(phase)*1.4f
-        p.color=0x5533261b;c.drawOval(x-7f,y+4f,x+8f,y+8f,p)
-        p.color=if(enemy)0xffa34235.toInt() else if(role==Role.GUARD)0xff9b7b48.toInt() else if(role==Role.ARCHER)0xff526f83.toInt() else 0xff765038.toInt()
-        c.drawRect(x-4f,y-3f+bob,x+4f,y+5f+bob,p)
-        p.color=if(enemy)0xffc17c59.toInt() else 0xffc58d5e.toInt()
+        p.color=0x6633261b;c.drawOval(x-8f,y+4f,x+9f,y+9f,p)
+        val tunic=if(enemy)0xffa34235.toInt() else if(role==Role.GUARD)0xff9b7b48.toInt() else if(role==Role.ARCHER)0xff526f83.toInt() else 0xff765038.toInt()
+        val body=Path().apply {
+            moveTo(x-4f,y-4f+bob);lineTo(x+4f,y-4f+bob);lineTo(x+5f,y+5f+bob)
+            lineTo(x-5f,y+5f+bob);close()
+        }
+        p.color=tunic;c.drawPath(body,p)
+        p.color=if(enemy)0xffd29a70.toInt() else 0xffc58d5e.toInt()
         c.drawCircle(x,y-9f+bob,4.2f,p)
+        // Hair, face and a narrow leather belt make the tiny sprites easier to read.
         p.color=0xff3d2b22.toInt();c.drawArc(x-4.5f,y-14f+bob,x+4.5f,y-5f+bob,180f,180f,true,p)
+        p.color=0xfff0d0a0.toInt();c.drawCircle(x+1.5f,y-9f+bob,0.65f,p)
+        p.color=0xff493426.toInt();c.drawLine(x-4f,y+1f+bob,x+4f,y+1f+bob,p)
         p.color=0xff4b3526.toInt()
-        c.drawLine(x-2f,y+3f+bob,x-3f,y+9f+bob,p);c.drawLine(x+2f,y+3f+bob,x+3f,y+9f+bob,p)
+        c.drawLine(x-2f,y+4f+bob,x-3f,y+10f+bob,p);c.drawLine(x+2f,y+4f+bob,x+3f,y+10f+bob,p)
+        p.color=0xffc58d5e.toInt()
+        c.drawLine(x-4f,y-2f+bob,x-7f,y+2f+bob,p);c.drawLine(x+4f,y-2f+bob,x+7f,y+1f+bob,p)
         if(role==Role.GUARD || role==Role.ARCHER || enemy) {
             if(role==Role.ARCHER && !enemy) {
-                p.color=0xff9b7547.toInt();c.drawArc(x+1f,y-13f+bob,x+13f,y-1f+bob,260f,200f,false,p)
-                p.color=0xffd6c49b.toInt();c.drawLine(x+7f,y-12f+bob,x+7f,y-1f+bob,p)
+                p.color=0xff9b7547.toInt();c.drawArc(x+1f,y-14f+bob,x+14f,y-1f+bob,260f,200f,false,p)
+                p.color=0xffd6c49b.toInt();c.drawLine(x+7f,y-13f+bob,x+7f,y-1f+bob,p)
+                p.color=0xff65472f.toInt();c.drawLine(x+5f,y-3f+bob,x+12f,y-11f+bob,p)
             } else {
-                p.color=0xff8a8a7a.toInt();c.drawLine(x+4f,y-2f+bob,x+10f,y-16f+bob,p)
+                p.color=0xff8a8a7a.toInt();c.drawLine(x+4f,y-2f+bob,x+10f,y-17f+bob,p)
                 p.color=0xff68472c.toInt();c.drawLine(x+4f,y-1f+bob,x+8f,y+4f+bob,p)
+                if(!enemy) {
+                    p.color=0xffb99a68.toInt();c.drawArc(x-5f,y-17f+bob,x+5f,y-5f+bob,180f,180f,false,p)
+                }
             }
         } else {
             p.color=0xffa88b62.toInt();c.drawLine(x+3f,y-2f+bob,x+8f,y-9f+bob,p)
