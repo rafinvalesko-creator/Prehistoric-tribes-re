@@ -1,1 +1,1 @@
-Retry with indentation-independent source repair.
+Build APK from original embedded Java ME JAR, no decompilation.
