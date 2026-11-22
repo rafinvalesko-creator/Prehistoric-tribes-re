@@ -114,6 +114,8 @@ public class MainActivity extends Activity {
             saveTimer+=dt; if(saveTimer>12){saveTimer=0;save();}
             eventTimer+=dt;
             if(day>=3 && eventTimer>115){eventTimer=0;int count=2+random.nextInt(3);for(int i=0;i<count;i++)enemies.add(new Enemy(1190,145+random.nextInt(390)));notice="ТРЕВОГА! Чужое племя напало на поселение!";}
+            // Berry bushes keep their roots and regrow fruit after being harvested.
+            for(Node n:nodes){if(n.kind==0 && n.amount<=0){n.regrowTimer+=dt;if(n.regrowTimer>=45f){n.amount=90;n.regrowTimer=0;}}}
             for(Person q:people){
                 q.hunger=Math.min(100,q.hunger+dt*(food>0?.65f:1.8f));
                 q.energy=Math.max(0,Math.min(100,q.energy+(q.task==6?dt*5:-dt*.65f)));
@@ -127,10 +129,11 @@ public class MainActivity extends Activity {
                 if(target!=null && target.amount>0){
                     float dx=target.x-q.x,dy=target.y-q.y,dist=(float)Math.sqrt(dx*dx+dy*dy);
                     if(dist>24){float step=Math.min(dist,dt*36);q.x+=dx/dist*step;q.y+=dy/dist*step;}
-                    else {q.work+=dt; if(q.work>2.4f){q.work=0;target.amount=Math.max(0,target.amount-8);
+                    else {q.work+=dt; if(q.work>2.4f){q.work=0;
+                        // Only berry bushes lose visible harvestable fruit. Trees and rocks are permanent map objects.
+                        if(target.kind==0){target.amount=Math.max(0,target.amount-8);if(target.amount==0){target.regrowTimer=0;q.target=-1;}}
                         if(q.task==0)food+=hasBuilding(2)?10:7; else if(q.task==1)wood+=6; else if(q.task==2)stone+=5; else if(q.task==3)food+=hasBuilding(8)?13:9; else if(q.task==4){food+=12;tools=Math.max(0,tools-1);}
                         food=Math.min(food,hasBuilding(11)?500:250);wood=Math.min(wood,300);stone=Math.min(stone,250);
-                        if(target.amount==0)q.target=-1;
                     }}
                 } else if(q.task>=0 && q.task<=4){q.target=-1;assignNearest(q,q.task);}
                 else if(q.task==5){Building b=nearestUnfinished(q.x,q.y);if(b!=null){float dx=b.x-q.x,dy=b.y-q.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>25){q.x+=dx/d*dt*32;q.y+=dy/d*dt*32;}else{b.progress+=dt;if(b.progress>20){b.done=true;notice="Постройка завершена!";q.task=7;}}}else q.task=7;}
@@ -163,8 +166,9 @@ public class MainActivity extends Activity {
         }
         int countBuildings(){int n=0;for(Building b:buildings)if(b.done)n++;return n;}
         String missionText(){switch(mission){case 0:return "Запаси 120 еды";case 1:return "Собери 100 дерева";case 2:return "Построй 4 здания";case 3:return "Построй ясли";default:return "Племя процветает — исследуй мир";}}
-        Node findNode(int task,int idx){if(idx>=0&&idx<nodes.size()){Node n=nodes.get(idx);if(n.kind==task&&n.amount>0)return n;}return null;}
-        void assignNearest(Person q,int task){int best=-1;float d=Float.MAX_VALUE;for(int i=0;i<nodes.size();i++){Node n=nodes.get(i);if(n.kind==task&&n.amount>0){float z=(n.x-q.x)*(n.x-q.x)+(n.y-q.y)*(n.y-q.y);if(z<d){d=z;best=i;}}}q.target=best;if(best<0){q.task=7;notice="Поблизости нет подходящего места.";}}
+        boolean resourceAvailable(Node n){return n.kind!=0||n.amount>0;}
+        Node findNode(int task,int idx){if(idx>=0&&idx<nodes.size()){Node n=nodes.get(idx);if(n.kind==task&&resourceAvailable(n))return n;}return null;}
+        void assignNearest(Person q,int task){int best=-1;float d=Float.MAX_VALUE;for(int i=0;i<nodes.size();i++){Node n=nodes.get(i);if(n.kind==task&&resourceAvailable(n)){float z=(n.x-q.x)*(n.x-q.x)+(n.y-q.y)*(n.y-q.y);if(z<d){d=z;best=i;}}}q.target=best;if(best<0){q.task=7;notice=task==0?"Ягоды ещё не выросли.":"Поблизости нет подходящего места.";}}
         Building nearestUnfinished(float x,float y){Building best=null;float d=Float.MAX_VALUE;for(Building b:buildings)if(!b.done){float z=(b.x-x)*(b.x-x)+(b.y-y)*(b.y-y);if(z<d){d=z;best=b;}}return best;}
         void assign(int task){if(selected<0||selected>=people.size()){notice="Сначала выбери соплеменника.";return;}Person q=people.get(selected);q.task=task;q.target=-1;q.work=0;if(task>=0&&task<=4)assignNearest(q,task);if(task==6){q.homeX=460;q.homeY=380;}notice=q.name+": "+tasks[task]+".";}
         void build(int type,float x,float y){
@@ -203,8 +207,8 @@ public class MainActivity extends Activity {
             c.restore();
         }
         void drawNode(Canvas c,Node n){
-            if(n.amount<=0)return;
-            if(n.kind==0){p.setColor(Color.rgb(52,126,48));c.drawCircle(n.x,n.y,22,p);p.setColor(Color.rgb(210,45,54));for(int i=0;i<5;i++)c.drawCircle(n.x-10+i*5,n.y-5+(i%2)*10,4,p);}
+            // Bush silhouette is permanent; only the berries disappear until regrowth.
+            if(n.kind==0){p.setColor(Color.rgb(52,126,48));c.drawCircle(n.x,n.y,22,p);c.drawCircle(n.x-13,n.y+5,14,p);c.drawCircle(n.x+13,n.y+5,14,p);if(n.amount>0){p.setColor(Color.rgb(210,45,54));for(int i=0;i<5;i++)c.drawCircle(n.x-10+i*5,n.y-5+(i%2)*10,4,p);}}
             if(n.kind==1){p.setColor(Color.rgb(112,75,43));c.drawRect(n.x-5,n.y-5,n.x+5,n.y+30,p);p.setColor(Color.rgb(32,105,49));c.drawCircle(n.x,n.y-12,25,p);c.drawCircle(n.x-16,n.y-5,17,p);}
             if(n.kind==2){p.setColor(Color.rgb(112,115,113));Path z=new Path();z.moveTo(n.x-20,n.y+15);z.lineTo(n.x-10,n.y-17);z.lineTo(n.x+5,n.y-24);z.lineTo(n.x+22,n.y+15);z.close();c.drawPath(z,p);}
             if(n.kind==3){p.setColor(Color.rgb(242,215,127));c.drawOval(n.x-18,n.y-8,n.x+18,n.y+9,p);p.setColor(Color.WHITE);c.drawCircle(n.x,n.y,3,p);}
@@ -250,7 +254,7 @@ public class MainActivity extends Activity {
         String name;float x,y,hunger=20,energy=90,health=100,work=0,homeX,homeY;boolean male;int task=7,target=-1;float attackTimer=0;
         Person(String n,float px,float py,boolean m){name=n;x=px;y=py;male=m;homeX=px;homeY=py;}
     }
-    static final class Node {float x,y,amount;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;}}
+    static final class Node {float x,y,amount,regrowTimer=0;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;}}
     static final class Building {float x,y,progress=0,health=100,attackTimer=0;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
     static final class Enemy {float x,y,health=65,attackTimer=0;Enemy(float a,float b){x=a;y=b;}}
     static final class UiButton {float x,y,w,h;String label;UiButton(float a,float b,float c,float d,String s){x=a;y=b;w=c;h=d;label=s;}}
