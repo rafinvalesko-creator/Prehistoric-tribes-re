@@ -132,15 +132,15 @@ jobs:
                   if (!profileDir.isDirectory() && !profileDir.mkdirs()) {
                       throw new IOException("Не удалось создать настройки игры");
                   }
-                  File configFile = new File(profileDir, "config.json");
-                  if (!configFile.isFile()) {
-                      ProfileModel profile = new ProfileModel(profileDir);
-                      profile.orientation = 2;
-                      profile.touchInput = true;
-                      profile.showKeyboard = false;
-                      if (!ProfilesManager.saveConfig(profile)) {
-                          throw new IOException("Не удалось сохранить настройки сенсорного управления");
-                      }
+                  // This app uses direct screen gestures only: never create the virtual keypad/joystick.
+                  // Rewrite these dedicated-game settings on every launch so an older profile
+                  // cannot silently bring the virtual controls back.
+                  ProfileModel profile = new ProfileModel(profileDir);
+                  profile.orientation = 3; // MicroActivity.ORIENTATION_LANDSCAPE
+                  profile.touchInput = true;
+                  profile.showKeyboard = false;
+                  if (!ProfilesManager.saveConfig(profile)) {
+                      throw new IOException("Не удалось сохранить настройки прямого сенсорного управления");
                   }
               }
 
