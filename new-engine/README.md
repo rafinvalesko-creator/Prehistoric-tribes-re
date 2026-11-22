@@ -35,3 +35,9 @@ These systems are part of the clean-room prototype and are still being balanced.
 
 - Game state is serialized locally and restored automatically on launch; progress is autosaved during play and when the game surface closes.
 - Touchscreen action panel supports constructing huts, woodcamps, quarries and watchtowers, plus recruiting guards; actions validate costs and save immediately.
+
+
+### Оборона поселения
+- Стражники автоматически преследуют ближайших налётчиков в радиусе обнаружения и возвращаются к поселению, если врагов рядом нет.
+- Налётчики, добравшиеся до внешней линии обороны, сначала атакуют ближайший участок частокола; после пролома продолжают атаковать постройки.
+- Повреждённые участки частокола отображают шкалу прочности и могут быть восстановлены строителем.
