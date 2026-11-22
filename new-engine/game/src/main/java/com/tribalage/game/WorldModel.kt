@@ -301,6 +301,72 @@ class WorldModel {
     }
 
     fun visibleBuildings()=buildings.toList()
+
+    fun construct(type:Structure):Boolean {
+        if(type==Structure.GREAT_HALL || type==Structure.PALISADE) return false
+        val cost=when(type) {
+            Structure.HUT -> intArrayOf(35,24,8)
+            Structure.GRANARY -> intArrayOf(25,30,12)
+            Structure.WOODCAMP -> intArrayOf(12,28,4)
+            Structure.QUARRY -> intArrayOf(10,20,16)
+            Structure.HUNTER_CAMP -> intArrayOf(16,22,5)
+            Structure.WATCHTOWER -> intArrayOf(8,32,20)
+            Structure.BONFIRE -> intArrayOf(12,18,4)
+            else -> return false
+        }
+        if(!stock.canAfford(cost[0],cost[1],cost[2])) {
+            lastBattleText="Недостаточно ресурсов для строительства"
+            return false
+        }
+        val slots=listOf(
+            7.0f to 10.8f, 9.0f to 12.0f, 11.0f to 12.1f, 13.2f to 12.0f,
+            15.5f to 10.8f, 16.4f to 7.8f, 15.4f to 4.2f, 12.7f to 3.5f,
+            9.4f to 3.8f, 6.8f to 6.0f, 6.0f to 8.8f, 8.0f to 13.0f,
+            11.0f to 13.5f, 14.0f to 13.0f, 17.0f to 11.0f
+        )
+        val spot=slots.firstOrNull { (x,y) ->
+            buildings.none { distance(it.x,it.y,x,y)<1.15f } &&
+            tiles[y.toInt().coerceIn(0,height-1)][x.toInt().coerceIn(0,width-1)].ground!=Ground.WATER
+        }
+        if(spot==null) {
+            lastBattleText="Нет свободного места для постройки"
+            return false
+        }
+        stock.food-=cost[0]; stock.wood-=cost[1]; stock.stone-=cost[2]
+        buildings+=StructureState(nextId++,type,spot.first,spot.second,health=45f)
+        lastBattleText="Начато строительство: ${structureName(type)}"
+        return true
+    }
+
+    fun trainGuard():Boolean {
+        val foodCost=18
+        val hideCost=2
+        if(stock.food<foodCost || stock.hides<hideCost || people.count{it.role==Role.GUARD}>=8) {
+            lastBattleText="Не хватает еды/шкур или достигнут предел стражи"
+            return false
+        }
+        val recruit=people.firstOrNull { it.role==Role.GATHERER }
+        if(recruit==null) {
+            lastBattleText="Нет свободного жителя для обучения"
+            return false
+        }
+        stock.food-=foodCost
+        stock.hides-=hideCost
+        people[people.indexOf(recruit)]=recruit.copy(role=Role.GUARD,taskNode=-1,carrying=0)
+        lastBattleText="Житель обучен и вступил в стражу"
+        return true
+    }
+
+    private fun structureName(type:Structure)=when(type) {
+        Structure.HUT -> "хижина"
+        Structure.GRANARY -> "амбар"
+        Structure.WOODCAMP -> "лесной лагерь"
+        Structure.QUARRY -> "каменоломня"
+        Structure.HUNTER_CAMP -> "охотничий лагерь"
+        Structure.WATCHTOWER -> "сторожевая башня"
+        Structure.BONFIRE -> "костёр"
+        else -> "постройка"
+    }
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
         if(type==Structure.HUT) lastBattleText="Построено новое жильё"
