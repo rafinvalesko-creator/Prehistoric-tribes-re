@@ -8,7 +8,7 @@ This is a separate, from-scratch Android project. It does not compile, package, 
 - Landscape immersive rendering with a 960×432 logical viewport, scaling to phone screens including POCO X7 Pro.
 - Original vector-drawn terrain, settlement props and villagers.
 - A small autonomous simulation loop for food, wood and population.
-- No touch controls in this milestone, as requested.
+- Touchscreen controls for selecting units, moving groups, and issuing combat/defensive orders.
 
 This is an engine foundation and visual slice, **not yet a complete recreation**. Exact parity requires a verified reference specification for the original maps, sprites, unit/building roster, mission scripts, combat rules, UI and progression. The implementation will be expanded feature by feature.
 
@@ -70,7 +70,8 @@ Combat update:
 - Выбранные персонажи отмечаются светлыми кольцами, сведения о группе отображаются в верхней панели.
 - Коснитесь свободной суши, чтобы переместить выбранного персонажа или группу; группа строится в компактный строй.
 - Удерживайте палец на свободной суше, чтобы приказать группе занять позицию и удерживать оборону.
-- Коснитесь налётчика выбранной стражей, чтобы отдать приказ атаковать его.
+- Коснитесь налётчика выбранной стражей, чтобы отдать приказ атаковать именно эту цель; стража старается не переключаться на другого врага.
+- Если выбранная цель погибнет, стражники автоматически выберут ближайшего доступного противника.
 - Стражники на оборонительной позиции поддерживают бой на расстоянии; при критическом ранении они отходят к главному залу.
 - Приказ на обычное перемещение действует до 18 секунд; затем юниты возвращаются к обычным обязанностям.
 - Прямые боевые приказы доступны только стражникам; башни продолжают автоматически поддерживать оборону.
