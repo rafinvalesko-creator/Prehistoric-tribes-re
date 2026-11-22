@@ -186,7 +186,7 @@ public final class JarTouchPatcher {
         m.visitInsn(Opcodes.ISUB); m.visitIntInsn(Opcodes.BIPUSH,11); m.visitInsn(Opcodes.IADD);
         m.visitInsn(Opcodes.ICONST_5); m.visitInsn(Opcodes.IDIV);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"W","I"); m.visitInsn(Opcodes.IADD);
-        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"I","B"); m.visitInsn(Opcodes.ISUB);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"I","I"); m.visitInsn(Opcodes.ISUB);
         m.visitInsn(Opcodes.I2B); m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"y","B");
         m.visitVarInsn(Opcodes.ALOAD,0);
         m.visitVarInsn(Opcodes.ILOAD,2);
@@ -195,7 +195,7 @@ public final class JarTouchPatcher {
         m.visitInsn(Opcodes.ICONST_4); m.visitInsn(Opcodes.IDIV);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"X","I"); m.visitInsn(Opcodes.IADD);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"aJ","I"); m.visitInsn(Opcodes.ISUB);
-        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"K","B"); m.visitInsn(Opcodes.ISUB);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"K","I"); m.visitInsn(Opcodes.ISUB);
         m.visitInsn(Opcodes.I2B); m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"A","B");
         m.visitLabel(notMap);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
