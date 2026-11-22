@@ -486,7 +486,7 @@ private class WorldRenderer {
             "Охотничий лагерь  Е16 Д22 К5",
             "Сторожевая башня  Е8 Д32 К20",
             "Костёр  Е12 Д18 К4",
-            "Обучить стражника  Е18 Ш2",
+            "Стража Е18Ш2 / лучник* Е24Ш4",
             "Частокол  Е5 Д15 К5"
         )
         val costs=arrayOf(
@@ -495,7 +495,7 @@ private class WorldRenderer {
             intArrayOf(12,18,4),intArrayOf(18,0,0),intArrayOf(5,15,5)
         )
         val canTrain=world.stock.food>=18 && world.stock.hides>=2 &&
-            world.people.any{it.role==Role.GATHERER} && world.people.count{it.role==Role.GUARD}<8
+            world.people.any{it.role==Role.GATHERER} && (world.people.count{it.role==Role.GUARD}<8 || (world.stock.food>=24 && world.stock.hides>=4 && world.people.count{it.role==Role.ARCHER}<6))
         for(i in labels.indices) {
             val top=105f+i*30f
             val affordable=if(i==7) canTrain else world.stock.canAfford(costs[i][0],costs[i][1],costs[i][2])
@@ -509,6 +509,7 @@ private class WorldRenderer {
         val tools=if("Орудия труда" in world.unlockedTechnologies)"✓" else "—"
         val storage=if("Хранение запасов" in world.unlockedTechnologies)"✓" else "—"
         c.drawText("Орудия $tools · Хранилище $storage",792f,374f,p)
+        p.textSize=7.5f;p.color=0xffd7c18c.toInt();c.drawText("* Удержать для лучника",792f,364f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
