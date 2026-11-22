@@ -1,7 +1,5 @@
 name: Native Android prototype
 on:
-  push:
-    branches: [ native-android-remake ]
   workflow_dispatch:
 permissions:
   contents: read
