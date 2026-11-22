@@ -29,3 +29,6 @@ These systems are part of the clean-room prototype and are still being balanced.
 
 - Construction rules now include per-building food, wood, and stone costs, free-space checks, and unfinished building health.
 - Guard recruitment converts an available gatherer into a guard and consumes food and hides, with a cap on guard numbers.
+
+- Campaign milestones track gathering supplies, expanding housing, repelling the first raid, and unlocking core technologies.
+- Technology progression unlocks improved tool use (faster gathering) and expanded storage capacity.
