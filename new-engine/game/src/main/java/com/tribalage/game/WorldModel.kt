@@ -695,8 +695,12 @@ class WorldModel {
         }
         val enemy=enemies.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
         val attackTarget=enemy?.takeIf{distance(it.x,it.y,x,y)<1.0f}
-        if(attackTarget!=null && selected.any{it.role==Role.GUARD}) {
+        if(attackTarget!=null) {
             val guards=selected.filter{it.role==Role.GUARD}
+            if(guards.isEmpty()) {
+                lastBattleText="Атаковать могут только стражники"
+                return true
+            }
             guards.forEach { unit ->
                 unit.tx=attackTarget.x
                 unit.ty=attackTarget.y
