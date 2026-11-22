@@ -1,1 +1,1 @@
-Direct-touch map selection: remove hand cursor; landscape; no virtual controls.
+Touch selection without battlefield hand; verified bytecode field offsets; landscape.
