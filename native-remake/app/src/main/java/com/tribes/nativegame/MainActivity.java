@@ -40,7 +40,8 @@ public class MainActivity extends Activity {
         float scale=1, ox=0, oy=0, lastX, lastY, downX, downY, camX=0, camY=0;
         boolean dragging=false, buildMenu=false, paused=false;
         int selected=-1, buildChoice=-1, food=90, wood=55, stone=25, tools=8, day=1;
-        float dayTime=0, eventTimer=0, saveTimer=0;
+        float dayTime=0, eventTimer=0, saveTimer=0, populationTimer=0;
+        int mission=0;
         String notice="Племя просыпается. Назначь людям работу!";
         String[] buildNames={"Хижина","Склад","Кухня","Дом вождя","Тренировочная площадка","Тир","Сторожевая вышка","Тотем","Рыбацкая хижина","Мастерская","Ясли","Амбар","Хижина шамана"};
         int[] buildFood={0,0,10,0,0,0,0,10,5,0,15,0,10};
@@ -111,12 +112,14 @@ public class MainActivity extends Activity {
             dayTime+=dt; if(dayTime>150){dayTime=0;day++;food=Math.max(0,food-people.size()*2);notice="День "+day+": племени нужен запас еды!";}
             saveTimer+=dt; if(saveTimer>12){saveTimer=0;save();}
             eventTimer+=dt;
-            if(day>=3 && eventTimer>115){eventTimer=0;notice="Тревога! У границ замечены чужие охотники."; for(Person q:people)if(q.task==5)q.task=4;}
+            if(day>=3 && eventTimer>115){eventTimer=0;int guards=0;for(Person q:people)if(q.task==4)guards++;if(guards>=2||hasBuilding(6)){notice="Набег отбили! Племя удержало поселение.";tools=Math.max(0,tools-1);}else{food=Math.max(0,food-25);wood=Math.max(0,wood-15);for(Person q:people)q.health=Math.max(20,q.health-12);notice="Набег! Чужаки унесли часть запасов.";}}
             for(Person q:people){
                 q.hunger=Math.min(100,q.hunger+dt*(food>0?.65f:1.8f));
                 q.energy=Math.max(0,Math.min(100,q.energy+(q.task==6?dt*5:-dt*.65f)));
                 if(q.hunger>86 && food>0){food=Math.max(0,food-1);q.hunger=35;}
                 if(q.hunger>99)q.health-=dt*2;
+                if(q.energy<8 && q.task!=6){q.task=6;q.target=-1;}
+                if(q.task==6 && q.energy>96)q.task=7;
                 if(q.health<=0){q.health=100;q.hunger=30;notice=q.name+" едва пережил голод.";}
                 if(q.task==6){q.x+=(q.homeX-q.x)*dt*.25f;q.y+=(q.homeY-q.y)*dt*.25f;continue;}
                 Node target=findNode(q.task,q.target);
@@ -124,7 +127,8 @@ public class MainActivity extends Activity {
                     float dx=target.x-q.x,dy=target.y-q.y,dist=(float)Math.sqrt(dx*dx+dy*dy);
                     if(dist>24){float step=Math.min(dist,dt*36);q.x+=dx/dist*step;q.y+=dy/dist*step;}
                     else {q.work+=dt; if(q.work>2.4f){q.work=0;target.amount=Math.max(0,target.amount-8);
-                        if(q.task==0)food+=7; else if(q.task==1)wood+=6; else if(q.task==2)stone+=5; else if(q.task==3)food+=9; else if(q.task==4){food+=12;tools=Math.max(0,tools-1);}
+                        if(q.task==0)food+=hasBuilding(2)?10:7; else if(q.task==1)wood+=6; else if(q.task==2)stone+=5; else if(q.task==3)food+=hasBuilding(8)?13:9; else if(q.task==4){food+=12;tools=Math.max(0,tools-1);}
+                        food=Math.min(food,hasBuilding(11)?500:250);wood=Math.min(wood,300);stone=Math.min(stone,250);
                         if(target.amount==0)q.target=-1;
                     }}
                 } else if(q.task>=0 && q.task<=4){q.target=-1;assignNearest(q,q.task);}
@@ -132,7 +136,27 @@ public class MainActivity extends Activity {
                 else if(q.task==7 && random.nextFloat()<dt*.08f){q.x+=random.nextFloat()*16-8;q.y+=random.nextFloat()*16-8;}
                 q.x=Math.max(55,Math.min(1190,q.x));q.y=Math.max(115,Math.min(565,q.y));
             }
+            updatePopulation(dt);
+            checkMission();
         }
+        boolean hasBuilding(int type){for(Building b:buildings)if(b.type==type&&b.done)return true;return false;}
+        void updatePopulation(float dt){
+            populationTimer+=dt;
+            if(populationTimer>90 && hasBuilding(10) && people.size()<12 && food>80){
+                populationTimer=0;food-=30;Building nursery=null;for(Building b:buildings)if(b.type==10&&b.done){nursery=b;break;}
+                float x=nursery==null?470:nursery.x+18,y=nursery==null?390:nursery.y+18;
+                Person child=new Person("Малыш"+(people.size()-5),x,y,people.size()%2==0);child.hunger=10;child.energy=100;child.task=6;people.add(child);notice="В племени родился ребёнок!";
+            }
+            if(populationTimer>75 && hasBuilding(9)){populationTimer=0;tools=Math.min(99,tools+1);}
+        }
+        void checkMission(){
+            if(mission==0&&food>=120){mission=1;notice="Задание выполнено: еды хватит на всех. Собери дерево.";}
+            else if(mission==1&&wood>=100){mission=2;notice="Дерево собрано. Теперь расширь поселение.";}
+            else if(mission==2&&countBuildings()>=4){mission=3;notice="Поселение растёт! Построй ясли и сохрани запасы.";}
+            else if(mission==3&&hasBuilding(10)){mission=4;notice="Ясли готовы. Теперь племя может расти.";}
+        }
+        int countBuildings(){int n=0;for(Building b:buildings)if(b.done)n++;return n;}
+        String missionText(){switch(mission){case 0:return "Запаси 120 еды";case 1:return "Собери 100 дерева";case 2:return "Построй 4 здания";case 3:return "Построй ясли";default:return "Племя процветает — исследуй мир";}}
         Node findNode(int task,int idx){if(idx>=0&&idx<nodes.size()){Node n=nodes.get(idx);if(n.kind==task&&n.amount>0)return n;}return null;}
         void assignNearest(Person q,int task){int best=-1;float d=Float.MAX_VALUE;for(int i=0;i<nodes.size();i++){Node n=nodes.get(i);if(n.kind==task&&n.amount>0){float z=(n.x-q.x)*(n.x-q.x)+(n.y-q.y)*(n.y-q.y);if(z<d){d=z;best=i;}}}q.target=best;if(best<0){q.task=7;notice="Поблизости нет подходящего места.";}}
         Building nearestUnfinished(float x,float y){Building best=null;float d=Float.MAX_VALUE;for(Building b:buildings)if(!b.done){float z=(b.x-x)*(b.x-x)+(b.y-y)*(b.y-y);if(z<d){d=z;best=b;}}return best;}
@@ -199,7 +223,7 @@ public class MainActivity extends Activity {
             p.setColor(Color.rgb(73,48,31));c.drawRoundRect(10,8,1270,78,18,18,p);
             p.setColor(Color.rgb(242,216,160));p.setTextSize(24);c.drawText("ПЛЕМЯ  •  День "+day,28,38,p);
             p.setTextSize(18);c.drawText("Еда  "+food,340,37,p);c.drawText("Дерево  "+wood,475,37,p);c.drawText("Камень  "+stone,650,37,p);c.drawText("Орудия  "+tools,820,37,p);
-            p.setTextSize(14);p.setColor(Color.rgb(250,231,185));c.drawText("Людей: "+people.size()+"   "+notice,28,63,p);
+            p.setTextSize(14);p.setColor(Color.rgb(250,231,185));c.drawText("Людей: "+people.size()+"  •  Цель: "+missionText()+"  •  "+notice,28,63,p);
             p.setColor(Color.rgb(160,73,48));c.drawRoundRect(1190,15,1254,66,12,12,p);p.setColor(Color.WHITE);p.setTextSize(18);c.drawText(paused?"▶":"Ⅱ",1210,48,p);
             if(selected>=0&&selected<people.size()){Person q=people.get(selected);p.setColor(Color.rgb(65,52,38));c.drawRoundRect(970,14,1178,68,10,10,p);p.setColor(Color.WHITE);p.setTextSize(15);c.drawText(q.name+"  "+tasks[Math.max(0,Math.min(7,q.task))],985,36,p);p.setTextSize(12);c.drawText("Сытость "+(int)(100-q.hunger)+"%  Силы "+(int)q.energy+"%",985,56,p);}
         }
