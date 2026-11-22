@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/trigger-build.txt'
       - '.github/workflows/trigger-build-2.txt'
+      - '.github/workflows/trigger-build-3.txt'
 
 permissions:
   contents: read
@@ -51,6 +52,7 @@ jobs:
           mkdir -p jlmod/app/src/midlet/java jlmod/app/src/midlet/resources/MIDLET-META-INF
           cp decompiled/*.java jlmod/app/src/midlet/java/
           unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
+          chmod -R u+rwX /tmp/prehistoric-jar
           cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
           find jlmod/app/src/midlet/resources -type f -name '*.class' -delete
           rm -rf jlmod/app/src/midlet/resources/META-INF
