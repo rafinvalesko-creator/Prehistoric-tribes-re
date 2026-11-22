@@ -63,3 +63,11 @@ Resource exhaustion:
 
 Combat update:
 - Watchtowers automatically target the nearest living raider within 6.5 map units and deal ranged damage every combat volley. Defeated raiders are removed immediately and their reward is granted once.
+
+## Управление отрядами касанием
+
+- Коснитесь жителя на карте, чтобы выбрать его; выбранный юнит отмечается светлым кольцом.
+- Затем коснитесь свободной суши, чтобы приказать выбранному жителю переместиться в указанную точку.
+- Приказ действует до 18 секунд; после выполнения житель возвращается к обычной роли.
+- Выбор и приказы доступны для собирателей, охотников, строителей и стражников.
+- Ручной приказ сохраняется вместе с состоянием юнита.
