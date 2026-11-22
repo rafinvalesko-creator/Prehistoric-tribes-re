@@ -43,11 +43,21 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
     private var viewScale=1f
     private var offsetX=0f
     private var offsetY=0f
+    private var touchDownX=0f
+    private var touchDownY=0f
+    private var touchDownTime=0L
 
     init { holder.addCallback(this); isFocusable=true }
 
     override fun onTouchEvent(event:MotionEvent):Boolean {
+        if(event.action==MotionEvent.ACTION_DOWN) {
+            touchDownX=event.x
+            touchDownY=event.y
+            touchDownTime=event.eventTime
+            return true
+        }
         if(event.action!=MotionEvent.ACTION_UP) return true
+        val longPress=event.eventTime-touchDownTime>=500L
         val lx=(event.x-offsetX)/viewScale
         val ly=(event.y-offsetY)/viewScale
         synchronized(model) {
@@ -69,7 +79,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             val b=(ly-65f)/9f
             val tileX=(a+b)/2f
             val tileY=(b-a)/2f
-            synchronized(model) { model.selectOrOrder(tileX,tileY) }
+            synchronized(model) { model.selectOrOrder(tileX,tileY,longPress) }
             return true
         }
         if(lx !in 786f..944f) return true
@@ -361,7 +371,7 @@ private class WorldRenderer {
 
     private fun drawUnits(c:Canvas,world:WorldModel) {
         for(unit in world.people.sortedBy{it.x+it.y}) {
-            if(unit.id==world.selectedUnitId) {
+            if(unit.id in world.selectedUnitIds || unit.id==world.selectedUnitId) {
                 p.style=Paint.Style.STROKE
                 p.strokeWidth=2.2f
                 p.color=0xffffdf75.toInt()
