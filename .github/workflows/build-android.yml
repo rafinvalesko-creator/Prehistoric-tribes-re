@@ -89,7 +89,7 @@ jobs:
               private static final String GAME_NAME = "Prehistoric Tribes";
               private static final String GAME_DIR = "Prehistoric Tribes";
               private static final String JAR_ASSET = "prehistoric-tribes-0.1.38.jar";
-              private static final String PATCH_VERSION = "direct-touch-v2";
+              private static final String PATCH_VERSION = "direct-touch-v3";
               private File workDir;
 
               private TextView status;
@@ -130,17 +130,22 @@ jobs:
               }
 
               private void ensureDefaultProfile() throws IOException {
+                  enforceGameProfile();
+              }
+
+              // Public so the installer can enforce the same settings immediately before launch.
+              public static void enforceGameProfile() throws IOException {
                   File profileDir = new File(Config.getConfigsDir(), GAME_DIR);
                   if (!profileDir.isDirectory() && !profileDir.mkdirs()) {
                       throw new IOException("Не удалось создать настройки игры");
                   }
-                  // This app uses direct screen gestures only: never create the virtual keypad/joystick.
-                  // Rewrite these dedicated-game settings on every launch so an older profile
-                  // cannot silently bring the virtual controls back.
                   ProfileModel profile = new ProfileModel(profileDir);
-                  profile.orientation = 3; // MicroActivity.ORIENTATION_LANDSCAPE
+                  profile.orientation = 3; // landscape in JL-Mod
                   profile.screenWidth = 320;
                   profile.screenHeight = 240;
+                  profile.screenScaleType = 1; // preserve the landscape 4:3 game image
+                  profile.screenScaleToFit = true;
+                  profile.screenKeepAspectRatio = true;
                   profile.forceFullscreen = true;
                   profile.touchInput = true;
                   profile.showKeyboard = false;
@@ -232,7 +237,8 @@ jobs:
           s = installer.read_text()
           pattern = re.compile(r'(?m)^(\s*)Config\.startApp\(v\.getContext\(\), app\.getTitle\(\), app\.getPathExt\(\)\);')
           s, count = pattern.subn(
-              lambda m: m.group(1) + 'try (java.io.FileWriter marker = new java.io.FileWriter(new java.io.File(Config.getEmulatorDir(), "touch-patch-version.txt"))) { marker.write("direct-touch-v2"); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
+              lambda m: m.group(1) + 'try { ru.playsoftware.j2meloader.BundledGameActivity.enforceGameProfile(); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
+                        + m.group(1) + 'try (java.io.FileWriter marker = new java.io.FileWriter(new java.io.File(Config.getEmulatorDir(), "touch-patch-version.txt"))) { marker.write("direct-touch-v3"); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
                         + m.group(1) + 'Config.startApp(v.getContext(), app.getTitle(), app.getPathExt());\n'
                         + m.group(1) + 'if (getActivity() != null) getActivity().finish();',
               s
