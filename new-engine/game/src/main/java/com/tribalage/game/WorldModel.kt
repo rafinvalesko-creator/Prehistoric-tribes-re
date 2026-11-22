@@ -191,13 +191,7 @@ class WorldModel {
                     lastBattleText="Сторожевая башня обстреливает врага"
                 }
             }
-            val defeated=enemies.filter{it.health<=0f}
-            if(defeated.isNotEmpty()) {
-                stock.food+=4*defeated.size
-                stock.hides+=defeated.size
-                enemies.removeAll(defeated.toSet())
-                lastBattleText="Враги повержены: +${4*defeated.size} еды, +${defeated.size} шкур"
-            }
+            removeDefeatedEnemies()
         }
         val fallen=people.filter{it.health<=0f}
         if(fallen.isNotEmpty()) {
@@ -402,7 +396,18 @@ class WorldModel {
                 }
             }
         }
-        enemies.removeAll{it.health<=0f}
+        removeDefeatedEnemies()
+    }
+
+    private fun removeDefeatedEnemies() {
+        val defeated=enemies.filter{it.health<=0f}
+        if(defeated.isEmpty()) return
+        stock.food+=4*defeated.size
+        stock.hides+=defeated.size
+        val defeatedIds=defeated.map{it.id}.toSet()
+        enemies.removeAll(defeated.toSet())
+        people.filter{it.focusTargetId in defeatedIds}.forEach{it.focusTargetId=-1}
+        lastBattleText="Враги повержены: +${4*defeated.size} еды, +${defeated.size} шкур"
     }
 
     private fun isWalkable(x:Float,y:Float):Boolean {
