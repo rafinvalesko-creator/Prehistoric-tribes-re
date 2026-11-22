@@ -25,7 +25,7 @@ jobs:
           gradle-version: '8.9'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platforms;android-35,build-tools;35.0.0'
+          packages: 'platforms;android-35 build-tools;35.0.0'
           accept-android-sdk-licenses: true
       - name: Build APK
         run: gradle -p new-engine :game:assembleDebug
