@@ -335,6 +335,7 @@ class WorldModel {
         val targetX=11.5f
         val targetY=8.5f
         for(e in enemies) {
+            if(e.health<=0f) continue
             val nearestWall=buildings.filter{it.type==Structure.PALISADE && it.health>0f}
                 .minByOrNull{distance(it.x,it.y,e.x,e.y)}
             val target=nearestWall ?: buildings.filter{it.type!=Structure.PALISADE}
