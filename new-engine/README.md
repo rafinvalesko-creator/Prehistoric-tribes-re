@@ -59,3 +59,7 @@ Resource exhaustion:
 - Пауза включается и выключается касанием небольшой панели «АВТОНОМНАЯ СИМУЛЯЦИЯ» над списком строительства. Состояние паузы сохраняется.
 
 - Defeat is triggered if the Great Hall is destroyed or the population reaches zero; touching the screen starts a fresh settlement.
+
+
+Combat update:
+- Watchtowers automatically target the nearest living raider within 6.5 map units and deal ranged damage every combat volley. Defeated raiders are removed immediately and their reward is granted once.
