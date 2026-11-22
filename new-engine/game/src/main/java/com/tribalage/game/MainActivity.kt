@@ -429,12 +429,10 @@ private class WorldRenderer {
             p.typeface=Typeface.DEFAULT;p.textSize=9.5f
             c.drawText(labels[i],793f,top+18f,p)
         }
-        p.color=0xffb8c49d.toInt();p.textSize=9f
-        c.drawText("Е — еда · Д — дерево · К — камень · Ш — шкуры",788f,380f,p)
-        p.color=0xffd7c18c.toInt();p.textSize=9f
+        p.color=0xffd7c18c.toInt();p.textSize=8.5f
         val tools=if("Орудия труда" in world.unlockedTechnologies)"✓" else "—"
         val storage=if("Хранение запасов" in world.unlockedTechnologies)"✓" else "—"
-        c.drawText("Технологии: орудия $tools · хранилище $storage",788f,391f,p)
+        c.drawText("Орудия $tools · Хранилище $storage",792f,373f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
