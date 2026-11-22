@@ -33,9 +33,14 @@ jobs:
           cache-dependency-path: jlmod/**/*.gradle*
 
       - name: Install Android SDK components
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670"
+          SDKMANAGER="$(find /usr/local/lib/android/sdk/cmdline-tools -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670"
 
       - name: Prepare MIDlet source and resources
         shell: bash
