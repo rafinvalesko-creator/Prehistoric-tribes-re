@@ -1,1 +1,1 @@
-Build touch input with direct map tile and command menu taps.
+Build tap-to-map, command menu tap and long-press gesture.
