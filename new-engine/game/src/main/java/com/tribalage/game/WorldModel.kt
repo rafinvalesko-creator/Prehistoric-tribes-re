@@ -186,8 +186,8 @@ class WorldModel {
             lastBattleText="В племени родился новый житель"
         }
         stock.food=stock.food.coerceIn(0,999)
-        stock.wood=stock.wood.coerceIn(0,999)
-        stock.stone=stock.stone.coerceIn(0,999)
+        stock.wood=stock.wood.coerceIn(0,if("Хранение запасов" in unlockedTechnologies)1199 else 999)
+        stock.stone=stock.stone.coerceIn(0,if("Хранение запасов" in unlockedTechnologies)1199 else 999)
         stock.hides=stock.hides.coerceIn(0,999)
     }
 
