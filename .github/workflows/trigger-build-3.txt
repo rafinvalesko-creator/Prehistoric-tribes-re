@@ -1,1 +1,1 @@
-Trigger Android build after resource permission fix.
+Trigger APK build after making Gradle wrapper executable.
