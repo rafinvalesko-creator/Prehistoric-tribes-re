@@ -57,6 +57,12 @@ class WorldModel {
     private var guardVolley=0f
     var lastBattleText="Поселение спокойно"
         private set
+    var completedMissions=0
+        private set
+    var unlockedTechnologies=mutableSetOf<String>()
+        private set
+    private var missionStage=0
+    private var technologyClock=0f
     private val rng=Random(38117)
 
     init {
@@ -153,6 +159,7 @@ class WorldModel {
         }
         updateWorkers(dt)
         updateRaiders(dt)
+        updateProgression(dt)
         guardVolley+=dt
         if(guardVolley>=0.85f) {
             guardVolley=0f
@@ -228,7 +235,7 @@ class WorldModel {
                 if(distance(p.x,p.y,p.tx,p.ty)>0.22f) move(p,p.tx,p.ty,dt)
                 else {
                     p.work+=dt
-                    if(p.work>2.4f) {
+                    if(p.work>if("Орудия труда" in unlockedTechnologies) 1.8f else 2.4f) {
                         p.work=0f
                         if(tile.amount>0) {
                             tile.amount-=1
@@ -249,6 +256,42 @@ class WorldModel {
                     p.taskNode=-1
                 }
             }
+        }
+    }
+
+    private fun updateProgression(dt:Float) {
+        technologyClock+=dt
+        when(missionStage) {
+            0 -> if(stock.wood>=140 && stock.stone>=85) {
+                missionStage=1; completedMissions++
+                missionText="Задание выполнено: запасы материалов собраны"
+                lastBattleText="Новая цель: постройте ещё одну хижину"
+            }
+            1 -> if(buildings.count{it.type==Structure.HUT}>=4) {
+                missionStage=2; completedMissions++
+                missionText="Задание выполнено: жильё расширено"
+                lastBattleText="Новая цель: укрепите оборону и переживите набег"
+            }
+            2 -> if(raidCount>=1 && enemies.isEmpty()) {
+                missionStage=3; completedMissions++
+                missionText="Задание выполнено: первый набег отражён"
+                lastBattleText="Новая цель: развивайте технологии племени"
+            }
+            3 -> if("Орудия труда" in unlockedTechnologies && "Хранение запасов" in unlockedTechnologies) {
+                missionStage=4; completedMissions++
+                missionText="Главы обучения пройдены. Племя готово к развитию"
+            }
+        }
+        if("Орудия труда" !in unlockedTechnologies && day>=3 && stock.wood>=65 && stock.stone>=35 && technologyClock>=12f) {
+            stock.wood-=25; stock.stone-=15
+            unlockedTechnologies.add("Орудия труда")
+            technologyClock=0f
+            lastBattleText="Открыта технология: Орудия труда"
+        } else if("Хранение запасов" !in unlockedTechnologies && day>=5 && stock.wood>=80 && stock.stone>=45 && technologyClock>=18f) {
+            stock.wood-=30; stock.stone-=20
+            unlockedTechnologies.add("Хранение запасов")
+            technologyClock=0f
+            lastBattleText="Открыта технология: Хранение запасов"
         }
     }
 
