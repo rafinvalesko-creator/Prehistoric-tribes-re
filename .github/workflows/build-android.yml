@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/trigger-build.txt'
+      - '.github/workflows/trigger-build-2.txt'
 
 permissions:
   contents: read
