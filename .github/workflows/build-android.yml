@@ -103,30 +103,24 @@ jobs:
           p.write_text(s)
           p = root / 'c.java'
           s = p.read_text()
-          old = """                        if (this.f49v <= 30) {
-                            if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {
-                                this.f49v++;
-                            } else {
-                                this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
-                            }
-                        }
-                    }
-                    if (this.f80O < 120 - this.f7b[this.f8a[298] + this.f31g]) {"""
-          new = """                        if (this.f49v <= 30) {
-                            if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {
-                                this.f49v++;
-                            } else {
-                                this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                    if (this.f80O < 120 - this.f7b[this.f8a[298] + this.f31g]) {"""
-          if old not in s:
-              raise SystemExit('Expected c.java loop not found; refusing unsafe patch')
-          s = s.replace(old, new, 1)
+          method_start = s.index('    private void al()')
+          case_start = s.index('                case 1:', method_start)
+          loop_start = s.index('                    while (true) {', case_start)
+          loop_end = s.index('                    if (this.f80O <', loop_start)
+          old_loop = s[loop_start:loop_end]
+          if old_loop.count('while (true)') != 1 or 'this.f49v <= 30' not in old_loop:
+              raise SystemExit('Expected al() search loop not found; refusing unsafe patch')
+          new_loop = (
+              '                    while (this.f49v <= 30) {\n'
+              '                        if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {\n'
+              '                            this.f49v++;\n'
+              '                        } else {\n'
+              '                            this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);\n'
+              '                            break;\n'
+              '                        }\n'
+              '                    }\n'
+          )
+          s = s[:loop_start] + new_loop + s[loop_end:]
           p.write_text(s)
           PY
           test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
