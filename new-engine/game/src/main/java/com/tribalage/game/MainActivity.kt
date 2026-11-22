@@ -64,6 +64,14 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             }
             return true
         }
+        if(lx in 0f..760f && ly in 80f..370f) {
+            val a=(lx-480f)/17.5f
+            val b=(ly-65f)/9f
+            val tileX=(a+b)/2f
+            val tileY=(b-a)/2f
+            synchronized(model) { model.selectOrOrder(tileX,tileY) }
+            return true
+        }
         if(lx !in 786f..944f) return true
         val action=((ly-105f)/30f).toInt()
         synchronized(model) {
@@ -352,7 +360,16 @@ private class WorldRenderer {
     }
 
     private fun drawUnits(c:Canvas,world:WorldModel) {
-        for(unit in world.people.sortedBy{it.x+it.y}) drawPerson(c,sx(unit.x,unit.y),sy(unit.x,unit.y),unit.walkingPhase,false,unit.role,unit.health)
+        for(unit in world.people.sortedBy{it.x+it.y}) {
+            if(unit.id==world.selectedUnitId) {
+                p.style=Paint.Style.STROKE
+                p.strokeWidth=2.2f
+                p.color=0xffffdf75.toInt()
+                c.drawOval(sx(unit.x,unit.y)-11f,sy(unit.x,unit.y)-3f,sx(unit.x,unit.y)+11f,sy(unit.x,unit.y)+8f,p)
+                p.style=Paint.Style.FILL
+            }
+            drawPerson(c,sx(unit.x,unit.y),sy(unit.x,unit.y),unit.walkingPhase,false,unit.role,unit.health)
+        }
         for(unit in world.enemies.sortedBy{it.x+it.y}) drawPerson(c,sx(unit.x,unit.y),sy(unit.x,unit.y),unit.walkingPhase,true,unit.role,unit.health)
     }
     private fun drawPerson(c:Canvas,x:Float,y:Float,phase:Float,enemy:Boolean,role:Role,hp:Float) {
