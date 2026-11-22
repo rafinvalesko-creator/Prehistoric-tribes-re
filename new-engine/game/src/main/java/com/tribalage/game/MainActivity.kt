@@ -27,11 +27,11 @@ class MainActivity : Activity() {
             or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
             or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
-        setContentView(TribalWorldView())
+        setContentView(TribalWorldView(this))
     }
 }
 
-private class TribalWorldView : SurfaceView, SurfaceHolder.Callback, Runnable {
+private class TribalWorldView(context: android.content.Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     @Volatile private var running = false
     private var loop: Thread? = null
@@ -48,7 +48,6 @@ private class TribalWorldView : SurfaceView, SurfaceHolder.Callback, Runnable {
     private val map = Array(15) { x -> IntArray(9) { y -> ((x * 13 + y * 7 + x * y) % 4) } }
 
     init { holder.addCallback(this); isFocusable = true }
-    constructor() : super(AppContextHolder.context)
 
     override fun surfaceCreated(holder: SurfaceHolder) { running = true; loop = Thread(this, "tribal-render").also { it.start() } }
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
@@ -62,6 +61,7 @@ private class TribalWorldView : SurfaceView, SurfaceHolder.Callback, Runnable {
             phase += dt
             if (phase >= 5f) {
                 phase -= 5f
+                day++
                 food += 2
                 wood += 1
                 if (food > 180 && population < 12) { population++; food -= 18 }
