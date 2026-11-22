@@ -52,6 +52,7 @@ class WorldModel {
     var firePulse=0f
         private set
     var selectedInfo="Племя Долины"
+    var paused=false
     private var dayClock=0f
     private var raidClock=95f
     private var growthClock=0f
@@ -123,6 +124,7 @@ class WorldModel {
     }
 
     fun update(dtRaw:Float) {
+        if(paused) return
         val dt=dtRaw.coerceIn(0f,0.05f)
         elapsed+=dt
         firePulse+=dt
@@ -479,7 +481,7 @@ class WorldModel {
     }
     fun saveState():String {
         val root=JSONObject()
-        root.put("day",day); root.put("population",population); root.put("morale",morale)
+        root.put("day",day); root.put("population",population); root.put("morale",morale); root.put("paused",paused)
         root.put("raidCount",raidCount); root.put("elapsed",elapsed); root.put("season",season)
         root.put("dayClock",dayClock); root.put("raidClock",raidClock); root.put("growthClock",growthClock)
         root.put("nextId",nextId); root.put("guardVolley",guardVolley); root.put("missionStage",missionStage)
@@ -515,6 +517,7 @@ class WorldModel {
     fun loadState(data:String):Boolean = try {
         val root=JSONObject(data)
         day=root.optInt("day",1).coerceAtLeast(1)
+        paused=root.optBoolean("paused",false)
         population=root.optInt("population",12).coerceAtLeast(0)
         morale=root.optInt("morale",86).coerceIn(0,100)
         raidCount=root.optInt("raidCount",0).coerceAtLeast(0)
@@ -578,6 +581,7 @@ class WorldModel {
 
     private fun resetToNewGame() {
         day=1
+        paused=false
         population=12
         morale=86
         raidCount=0
