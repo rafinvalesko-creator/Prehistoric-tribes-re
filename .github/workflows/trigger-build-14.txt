@@ -1,1 +1,1 @@
-Build with direct battlefield tile taps plus screen-wide touch navigation.
+Build touch input with direct map tile and command menu taps.
