@@ -50,6 +50,13 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
         if(event.action!=MotionEvent.ACTION_UP) return true
         val lx=(event.x-offsetX)/viewScale
         val ly=(event.y-offsetY)/viewScale
+        if(lx in 780f..944f && ly in 55f..78f) {
+            synchronized(model) {
+                model.paused=!model.paused
+                saveGame()
+            }
+            return true
+        }
         if(lx !in 786f..944f) return true
         val action=((ly-105f)/30f).toInt()
         synchronized(model) {
@@ -401,7 +408,7 @@ private class WorldRenderer {
         }
         p.color=0x99202d25.toInt();c.drawRoundRect(780f,55f,944f,78f,5f,5f,p)
         p.color=0xffd5c49c.toInt();p.textSize=10f;p.typeface=Typeface.DEFAULT
-        c.drawText("АВТОНОМНАЯ СИМУЛЯЦИЯ",790f,70f,p)
+        c.drawText(if(world.paused) "ПАУЗА · НАЖМИТЕ" else "АВТОНОМНАЯ СИМУЛЯЦИЯ",790f,70f,p)
     }
     private fun drawBuildPanel(c:Canvas,world:WorldModel) {
         p.color=0xe51b2921.toInt()
