@@ -4,6 +4,8 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
+import org.json.JSONArray
+import org.json.JSONObject
 
 enum class Ground { GRASS, DARK_GRASS, SAND, WATER, MUD }
 enum class NodeKind { TREE, ROCK, BERRY, DEER }
@@ -410,6 +412,102 @@ class WorldModel {
         Structure.BONFIRE -> "костёр"
         else -> "постройка"
     }
+    fun saveState():String {
+        val root=JSONObject()
+        root.put("day",day); root.put("population",population); root.put("morale",morale)
+        root.put("raidCount",raidCount); root.put("elapsed",elapsed); root.put("season",season)
+        root.put("dayClock",dayClock); root.put("raidClock",raidClock); root.put("growthClock",growthClock)
+        root.put("nextId",nextId); root.put("guardVolley",guardVolley); root.put("missionStage",missionStage)
+        root.put("technologyClock",technologyClock); root.put("completedMissions",completedMissions)
+        root.put("missionText",missionText); root.put("lastBattleText",lastBattleText)
+        root.put("food",stock.food); root.put("wood",stock.wood); root.put("stone",stock.stone); root.put("hides",stock.hides)
+        val tech=JSONArray(); unlockedTechnologies.forEach { tech.put(it) }; root.put("technologies",tech)
+        val structures=JSONArray()
+        buildings.forEach { b ->
+            structures.put(JSONObject().put("id",b.id).put("type",b.type.name).put("x",b.x)
+                .put("y",b.y).put("level",b.level).put("health",b.health))
+        }
+        root.put("buildings",structures)
+        fun encodeUnits(units:List<Villager>):JSONArray {
+            val array=JSONArray()
+            units.forEach { v ->
+                array.put(JSONObject().put("id",v.id).put("role",v.role.name).put("x",v.x).put("y",v.y)
+                    .put("tx",v.tx).put("ty",v.ty).put("taskNode",v.taskNode).put("work",v.work)
+                    .put("health",v.health).put("carrying",v.carrying).put("walkingPhase",v.walkingPhase)
+                    .put("taskBuildingId",v.taskBuildingId))
+            }
+            return array
+        }
+        root.put("people",encodeUnits(people)); root.put("enemies",encodeUnits(enemies))
+        val resources=JSONArray()
+        tiles.forEach { row -> row.forEach { tile ->
+            resources.put(JSONObject().put("amount",tile.amount))
+        } }
+        root.put("tileAmounts",resources)
+        return root.toString()
+    }
+
+    fun loadState(data:String):Boolean = try {
+        val root=JSONObject(data)
+        day=root.optInt("day",1).coerceAtLeast(1)
+        population=root.optInt("population",12).coerceAtLeast(0)
+        morale=root.optInt("morale",86).coerceIn(0,100)
+        raidCount=root.optInt("raidCount",0).coerceAtLeast(0)
+        elapsed=root.optDouble("elapsed",0.0).toFloat().coerceAtLeast(0f)
+        season=root.optInt("season",0).coerceIn(0,3)
+        dayClock=root.optDouble("dayClock",0.0).toFloat().coerceIn(0f,48f)
+        raidClock=root.optDouble("raidClock",95.0).toFloat().coerceAtLeast(0f)
+        growthClock=root.optDouble("growthClock",0.0).toFloat().coerceAtLeast(0f)
+        nextId=root.optInt("nextId",1).coerceAtLeast(1)
+        guardVolley=root.optDouble("guardVolley",0.0).toFloat().coerceAtLeast(0f)
+        missionStage=root.optInt("missionStage",0).coerceIn(0,4)
+        technologyClock=root.optDouble("technologyClock",0.0).toFloat().coerceAtLeast(0f)
+        completedMissions=root.optInt("completedMissions",0).coerceAtLeast(0)
+        missionText=root.optString("missionText","Развивайте поселение и переживите набеги")
+        lastBattleText=root.optString("lastBattleText","Поселение спокойно")
+        stock.food=root.optInt("food",145).coerceAtLeast(0)
+        stock.wood=root.optInt("wood",110).coerceAtLeast(0)
+        stock.stone=root.optInt("stone",70).coerceAtLeast(0)
+        stock.hides=root.optInt("hides",12).coerceAtLeast(0)
+        unlockedTechnologies.clear()
+        val tech=root.optJSONArray("technologies") ?: JSONArray()
+        for(i in 0 until tech.length()) unlockedTechnologies.add(tech.getString(i))
+        buildings.clear()
+        val savedBuildings=root.getJSONArray("buildings")
+        for(i in 0 until savedBuildings.length()) {
+            val b=savedBuildings.getJSONObject(i)
+            buildings.add(StructureState(b.getInt("id"),Structure.valueOf(b.getString("type")),
+                b.getDouble("x").toFloat(),b.getDouble("y").toFloat(),b.optInt("level",1),
+                b.optDouble("health",100.0).toFloat().coerceIn(0f,100f)))
+        }
+        fun decodeUnits(array:JSONArray):MutableList<Villager> {
+            val result=mutableListOf<Villager>()
+            for(i in 0 until array.length()) {
+                val v=array.getJSONObject(i)
+                result.add(Villager(v.getInt("id"),Role.valueOf(v.getString("role")),
+                    v.getDouble("x").toFloat(),v.getDouble("y").toFloat(),
+                    v.getDouble("tx").toFloat(),v.getDouble("ty").toFloat(),
+                    v.optInt("taskNode",-1),v.optDouble("work",0.0).toFloat(),
+                    v.optDouble("health",100.0).toFloat().coerceIn(0f,100f),
+                    v.optInt("carrying",0),v.optDouble("walkingPhase",0.0).toFloat(),
+                    v.optInt("taskBuildingId",-1)))
+            }
+            return result
+        }
+        people.clear(); people.addAll(decodeUnits(root.getJSONArray("people")))
+        enemies.clear(); enemies.addAll(decodeUnits(root.getJSONArray("enemies")))
+        val savedAmounts=root.optJSONArray("tileAmounts")
+        if(savedAmounts!=null) {
+            var index=0
+            tiles.forEach { row -> row.forEach { tile ->
+                if(index<savedAmounts.length()) tile.amount=savedAmounts.getJSONObject(index).optInt("amount",tile.amount).coerceAtLeast(0)
+                index++
+            } }
+        }
+        raidWarning=0f
+        true
+    } catch(_:Exception) { false }
+
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
         if(type==Structure.HUT) lastBattleText="Построено новое жильё"
