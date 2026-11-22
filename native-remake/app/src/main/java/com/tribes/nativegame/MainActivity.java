@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
                 for(String a:ps){String[] v=a.split(","); if(v.length>=6){Person q=new Person(v[0],Float.parseFloat(v[1]),Float.parseFloat(v[2]),v[3].equals("1"));q.hunger=Float.parseFloat(v[4]);q.energy=Float.parseFloat(v[5]);people.add(q);}}
                 String[] bs=rows[1].split(";");
                 for(String a:bs){String[] v=a.split(",");if(v.length>=4)buildings.add(new Building(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),v[3].equals("1")));}
-                if(rows.length>=3){String[] ns=rows[2].split(";");for(String a:ns){String[] v=a.split(",");if(v.length>=4){Node n=new Node(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),Float.parseFloat(v[3]));if(v.length>=5)n.regrowTimer=Float.parseFloat(v[4]);if(v.length>=6)n.capacity=Float.parseFloat(v[5]);nodes.add(n);}}}
+                if(rows.length>=3){String[] ns=rows[2].split(";");for(String a:ns){String[] v=a.split(",");if(v.length>=4){Node n=new Node(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),Float.parseFloat(v[3]));if(v.length>=5)n.regrowTimer=Float.parseFloat(v[4]);if(v.length>=6)n.capacity=Float.parseFloat(v[5]);else if(n.capacity<=0)n.capacity=n.kind==0?90:(n.kind==1?130:(n.kind==2?100:n.amount));nodes.add(n);}}}
                 if(people.isEmpty()) newGame();
             } catch(Exception e){newGame();}
         }
