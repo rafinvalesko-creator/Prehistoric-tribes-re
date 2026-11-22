@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
         final ArrayList<Person> people=new ArrayList<>();
         final ArrayList<Node> nodes=new ArrayList<>();
         final ArrayList<Building> buildings=new ArrayList<>();
+        final ArrayList<Enemy> enemies=new ArrayList<>();
         final ArrayList<UiButton> buttons=new ArrayList<>();
         final SharedPreferences prefs;
         float scale=1, ox=0, oy=0, lastX, lastY, downX, downY, camX=0, camY=0;
@@ -47,7 +48,7 @@ public class MainActivity extends Activity {
         int[] buildFood={0,0,10,0,0,0,0,10,5,0,15,0,10};
         int[] buildWood={18,24,20,40,30,24,35,16,22,30,26,20,28};
         int[] buildStone={4,8,6,12,10,8,15,12,4,12,4,8,18};
-        String[] tasks={"Собирать ягоды","Рубить дерево","Добывать камень","Ловить рыбу","Охотиться","Строить","Отдыхать","Свободен"};
+        String[] tasks={"Собирать ягоды","Рубить дерево","Добывать камень","Ловить рыбу","Охотиться","Строить","Отдыхать","Свободен","Охранять поселение"};
         long lastFrame=System.nanoTime();
 
         GameView(Context c) {
@@ -112,7 +113,7 @@ public class MainActivity extends Activity {
             dayTime+=dt; if(dayTime>150){dayTime=0;day++;food=Math.max(0,food-people.size()*2);notice="День "+day+": племени нужен запас еды!";}
             saveTimer+=dt; if(saveTimer>12){saveTimer=0;save();}
             eventTimer+=dt;
-            if(day>=3 && eventTimer>115){eventTimer=0;int guards=0;for(Person q:people)if(q.task==4)guards++;if(guards>=2||hasBuilding(6)){notice="Набег отбили! Племя удержало поселение.";tools=Math.max(0,tools-1);}else{food=Math.max(0,food-25);wood=Math.max(0,wood-15);for(Person q:people)q.health=Math.max(20,q.health-12);notice="Набег! Чужаки унесли часть запасов.";}}
+            if(day>=3 && eventTimer>115){eventTimer=0;int count=2+random.nextInt(3);for(int i=0;i<count;i++)enemies.add(new Enemy(1190,145+random.nextInt(390)));notice="ТРЕВОГА! Чужое племя напало на поселение!";}
             for(Person q:people){
                 q.hunger=Math.min(100,q.hunger+dt*(food>0?.65f:1.8f));
                 q.energy=Math.max(0,Math.min(100,q.energy+(q.task==6?dt*5:-dt*.65f)));
@@ -120,7 +121,7 @@ public class MainActivity extends Activity {
                 if(q.hunger>99)q.health-=dt*2;
                 if(q.energy<8 && q.task!=6){q.task=6;q.target=-1;}
                 if(q.task==6 && q.energy>96)q.task=7;
-                if(q.health<=0){q.health=100;q.hunger=30;notice=q.name+" едва пережил голод.";}
+                if(q.health<=0){q.health=100;q.hunger=30;q.task=6;q.target=-1;notice=q.name+" ранен и отправлен отдыхать.";}
                 if(q.task==6){q.x+=(q.homeX-q.x)*dt*.25f;q.y+=(q.homeY-q.y)*dt*.25f;continue;}
                 Node target=findNode(q.task,q.target);
                 if(target!=null && target.amount>0){
@@ -134,11 +135,16 @@ public class MainActivity extends Activity {
                 } else if(q.task>=0 && q.task<=4){q.target=-1;assignNearest(q,q.task);}
                 else if(q.task==5){Building b=nearestUnfinished(q.x,q.y);if(b!=null){float dx=b.x-q.x,dy=b.y-q.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>25){q.x+=dx/d*dt*32;q.y+=dy/d*dt*32;}else{b.progress+=dt;if(b.progress>20){b.done=true;notice="Постройка завершена!";q.task=7;}}}else q.task=7;}
                 else if(q.task==7 && random.nextFloat()<dt*.08f){q.x+=random.nextFloat()*16-8;q.y+=random.nextFloat()*16-8;}
+                else if(q.task==8){Enemy targetEnemy=nearestEnemy(q.x,q.y,175);if(targetEnemy!=null){float dx=targetEnemy.x-q.x,dy=targetEnemy.y-q.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>27){q.x+=dx/d*dt*48;q.y+=dy/d*dt*48;}else{q.attackTimer+=dt;if(q.attackTimer>1.0f){q.attackTimer=0;targetEnemy.health-=22;if(targetEnemy.health<=0){enemies.remove(targetEnemy);food+=5;notice="Защитник отбил нападавшего!";}}}}}
                 q.x=Math.max(55,Math.min(1190,q.x));q.y=Math.max(115,Math.min(565,q.y));
             }
+            updateEnemies(dt);
             updatePopulation(dt);
             checkMission();
         }
+        Enemy nearestEnemy(float x,float y,float range){Enemy best=null;float bestD=range*range;for(Enemy e:enemies){float d=(e.x-x)*(e.x-x)+(e.y-y)*(e.y-y);if(d<bestD){bestD=d;best=e;}}return best;}
+        void updateEnemies(float dt){for(int i=enemies.size()-1;i>=0;i--){Enemy e=enemies.get(i);Person victim=null;float best=Float.MAX_VALUE;for(Person q:people){float d=(q.x-e.x)*(q.x-e.x)+(q.y-e.y)*(q.y-e.y);if(d<best){best=d;victim=q;}}if(victim!=null&&best<2300){if(best>625){float d=(float)Math.sqrt(best);e.x+=(victim.x-e.x)/d*dt*24;e.y+=(victim.y-e.y)/d*dt*24;}else{e.attackTimer+=dt;if(e.attackTimer>1.4f){e.attackTimer=0;victim.health-=9;notice="На жителя напали! Назначь защитников.";}}}else{float dx=490-e.x,dy=365-e.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>34){e.x+=dx/d*dt*20;e.y+=dy/d*dt*20;}else{e.attackTimer+=dt;if(e.attackTimer>2){e.attackTimer=0;Building b=nearestBuilding(e.x,e.y);if(b!=null){b.health-=8;if(b.health<=0){buildings.remove(b);notice="Враги разрушили постройку!";}}}}}}}
+        Building nearestBuilding(float x,float y){Building best=null;float d=Float.MAX_VALUE;for(Building b:buildings)if(b.done){float z=(b.x-x)*(b.x-x)+(b.y-y)*(b.y-y);if(z<d){d=z;best=b;}}return best;}
         boolean hasBuilding(int type){for(Building b:buildings)if(b.type==type&&b.done)return true;return false;}
         void updatePopulation(float dt){
             populationTimer+=dt;
@@ -176,7 +182,7 @@ public class MainActivity extends Activity {
         void handleTap(float x,float y){
             if(paused){paused=false;return;}
             if(y<82&&x>1160){togglePause();return;}
-            if(y>610){int idx=(int)((x-16)/156);if(idx>=0&&idx<8){switch(idx){case 0:assign(0);break;case 1:assign(1);break;case 2:assign(2);break;case 3:assign(3);break;case 4:assign(4);break;case 5:buildMenu=!buildMenu;buildChoice=-1;break;case 6:assign(6);break;case 7:assign(7);break;}}return;}
+            if(y>610){int idx=(int)((x-16)/156);if(idx>=0&&idx<8){switch(idx){case 0:assign(0);break;case 1:assign(1);break;case 2:assign(2);break;case 3:assign(3);break;case 4:assign(4);break;case 5:buildMenu=!buildMenu;buildChoice=-1;break;case 6:assign(6);break;case 7:assign(8);break;}}return;}
             if(buildMenu&&y>475&&y<608){int col=(int)((x-18)/178),row=(int)((y-480)/58),n=row*7+col;if(n>=0&&n<buildNames.length){buildChoice=n;notice=buildNames[n]+": "+buildWood[n]+" дерева, "+buildStone[n]+" камня";}return;}
             if(buildChoice>=0&&y>88&&y<605){build(buildChoice,x+camX,y-88+camY);return;}
             if(y>88&&y<605){float wx=x+camX,wy=y-88+camY;int hit=-1;float d=Float.MAX_VALUE;for(int i=0;i<people.size();i++){Person q=people.get(i);float z=(q.x-wx)*(q.x-wx)+(q.y-wy)*(q.y-wy);if(z<d){d=z;hit=i;}}if(d<1800){selected=hit;notice=people.get(hit).name+" — "+tasks[Math.max(0,Math.min(7,people.get(hit).task))];}else{selected=-1;notice="Выбери человека или назначь задачу.";} }
@@ -191,6 +197,7 @@ public class MainActivity extends Activity {
             p.setColor(Color.rgb(188,220,209));p.setStrokeWidth(6);c.drawLine(1010,80,1040,640,p);
             for(Node n:nodes)drawNode(c,n);
             for(Building b:buildings)drawBuilding(c,b);
+            for(Enemy e:enemies)drawEnemy(c,e);
             for(Person q:people)drawPerson(c,q,people.indexOf(q)==selected);
             c.restore();
         }
@@ -202,6 +209,7 @@ public class MainActivity extends Activity {
             if(n.kind==3){p.setColor(Color.rgb(242,215,127));c.drawOval(n.x-18,n.y-8,n.x+18,n.y+9,p);p.setColor(Color.WHITE);c.drawCircle(n.x,n.y,3,p);}
             if(n.kind==4){p.setColor(Color.rgb(108,65,45));c.drawOval(n.x-17,n.y-12,n.x+18,n.y+12,p);p.setColor(Color.rgb(230,210,170));c.drawCircle(n.x+13,n.y-5,7,p);}
         }
+        void drawEnemy(Canvas c,Enemy e){p.setColor(Color.argb(75,20,15,10));c.drawOval(e.x-14,e.y+10,e.x+14,e.y+18,p);p.setColor(Color.rgb(116,42,34));c.drawRoundRect(e.x-10,e.y-4,e.x+10,e.y+17,7,7,p);p.setColor(Color.rgb(205,145,105));c.drawCircle(e.x,e.y-12,9,p);p.setColor(Color.rgb(55,35,28));c.drawRect(e.x-13,e.y-21,e.x+13,e.y-15,p);p.setColor(Color.WHITE);p.setTextSize(10);c.drawText("ВРАГ",e.x-13,e.y+31,p);}
         void drawBuilding(Canvas c,Building b){
             p.setColor(Color.argb(55,20,35,15));c.drawOval(b.x-37,b.y+18,b.x+37,b.y+30,p);
             p.setColor(b.done?new int[]{0xffa77a48,0xff8d7048,0xffa46f47,0xffbd8a4b,0xff99724c,0xff9c7145,0xff8a6846,0xffbd9a48,0xffa0784c,0xff7e674b,0xffbb9668,0xff997a4c,0xff80634b}[b.type]:Color.GRAY);
@@ -229,7 +237,7 @@ public class MainActivity extends Activity {
         }
         void drawActions(Canvas c){
             p.setColor(Color.rgb(63,48,37));c.drawRect(0,610,VW,VH,p);
-            String[] labels={"Ягоды","Дерево","Камень","Рыба","Охота","Строить","Отдых","Свободен"};
+            String[] labels={"Ягоды","Дерево","Камень","Рыба","Охота","Строить","Отдых","Охрана"};
             int[] colors={0xff557d3c,0xff557d3c,0xff747c7d,0xff347f9a,0xff9b633b,0xffa77c3e,0xff55718c,0xff77705e};
             for(int i=0;i<8;i++){float x=16+i*158;p.setColor(colors[i]);c.drawRoundRect(x,625,x+145,698,12,12,p);p.setColor(Color.WHITE);p.setTextSize(20);c.drawText(labels[i],x+18,669,p);}
             if(buildMenu){p.setColor(Color.argb(245,45,39,31));c.drawRoundRect(12,472,1268,606,16,16,p);for(int i=0;i<buildNames.length;i++){int col=i%7,row=i/7;float x=20+col*178,y=482+row*55;p.setColor(buildChoice==i?0xffc58c43:0xff766044);c.drawRoundRect(x,y,x+166,y+46,8,8,p);p.setColor(Color.WHITE);p.setTextSize(16);c.drawText(buildNames[i],x+8,y+20,p);p.setTextSize(12);c.drawText("Д:"+buildWood[i]+" К:"+buildStone[i]+" Е:"+buildFood[i],x+8,y+38,p);}}
@@ -238,10 +246,11 @@ public class MainActivity extends Activity {
         void drawOverlay(Canvas c,String title,String sub){p.setColor(Color.argb(190,20,25,20));c.drawRect(0,0,VW,VH,p);p.setColor(Color.rgb(244,224,174));p.setTextAlign(Paint.Align.CENTER);p.setTextSize(54);c.drawText(title,640,330,p);p.setTextSize(23);c.drawText(sub,640,380,p);p.setTextAlign(Paint.Align.LEFT);}
     }
     static final class Person {
-        String name;float x,y,hunger=20,energy=90,health=100,work=0,homeX,homeY;boolean male;int task=7,target=-1;
+        String name;float x,y,hunger=20,energy=90,health=100,work=0,homeX,homeY;boolean male;int task=7,target=-1;float attackTimer=0;
         Person(String n,float px,float py,boolean m){name=n;x=px;y=py;male=m;homeX=px;homeY=py;}
     }
     static final class Node {float x,y,amount;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;}}
-    static final class Building {float x,y,progress=0;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
+    static final class Building {float x,y,progress=0,health=100;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
+    static final class Enemy {float x,y,health=65,attackTimer=0;Enemy(float a,float b){x=a;y=b;}}
     static final class UiButton {float x,y,w,h;String label;UiButton(float a,float b,float c,float d,String s){x=a;y=b;w=c;h=d;label=s;}}
 }
