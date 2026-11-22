@@ -26,3 +26,6 @@ Run `gradle :game:assembleDebug` from this directory with JDK 17 and Android SDK
 - The HUD displays the current season and housing capacity.
 
 These systems are part of the clean-room prototype and are still being balanced.
+
+- Construction rules now include per-building food, wood, and stone costs, free-space checks, and unfinished building health.
+- Guard recruitment converts an available gatherer into a guard and consumes food and hides, with a cap on guard numbers.
