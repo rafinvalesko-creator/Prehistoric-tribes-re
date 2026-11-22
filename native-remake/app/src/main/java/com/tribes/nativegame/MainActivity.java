@@ -143,7 +143,7 @@ public class MainActivity extends Activity {
             checkMission();
         }
         Enemy nearestEnemy(float x,float y,float range){Enemy best=null;float bestD=range*range;for(Enemy e:enemies){float d=(e.x-x)*(e.x-x)+(e.y-y)*(e.y-y);if(d<bestD){bestD=d;best=e;}}return best;}
-        void updateEnemies(float dt){for(int i=enemies.size()-1;i>=0;i--){Enemy e=enemies.get(i);Person victim=null;float best=Float.MAX_VALUE;for(Person q:people){float d=(q.x-e.x)*(q.x-e.x)+(q.y-e.y)*(q.y-e.y);if(d<best){best=d;victim=q;}}if(victim!=null&&best<2300){if(best>625){float d=(float)Math.sqrt(best);e.x+=(victim.x-e.x)/d*dt*24;e.y+=(victim.y-e.y)/d*dt*24;}else{e.attackTimer+=dt;if(e.attackTimer>1.4f){e.attackTimer=0;victim.health-=9;notice="На жителя напали! Назначь защитников.";}}}else{float dx=490-e.x,dy=365-e.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>34){e.x+=dx/d*dt*20;e.y+=dy/d*dt*20;}else{e.attackTimer+=dt;if(e.attackTimer>2){e.attackTimer=0;Building b=nearestBuilding(e.x,e.y);if(b!=null){b.health-=8;if(b.health<=0){buildings.remove(b);notice="Враги разрушили постройку!";}}}}}}}
+        void updateEnemies(float dt){for(Building tower:buildings){if(tower.done&&tower.type==6){Enemy target=nearestEnemy(tower.x,tower.y,250);if(target!=null){tower.attackTimer+=dt;if(tower.attackTimer>1.35f){tower.attackTimer=0;target.health-=28;}}}}for(int j=enemies.size()-1;j>=0;j--)if(enemies.get(j).health<=0){enemies.remove(j);food+=3;notice="Сторожевая вышка отбила нападавшего!";}for(int i=enemies.size()-1;i>=0;i--){Enemy e=enemies.get(i);Person victim=null;float best=Float.MAX_VALUE;for(Person q:people){float d=(q.x-e.x)*(q.x-e.x)+(q.y-e.y)*(q.y-e.y);if(d<best){best=d;victim=q;}}if(victim!=null&&best<2300){if(best>625){float d=(float)Math.sqrt(best);e.x+=(victim.x-e.x)/d*dt*24;e.y+=(victim.y-e.y)/d*dt*24;}else{e.attackTimer+=dt;if(e.attackTimer>1.4f){e.attackTimer=0;victim.health-=9;notice="На жителя напали! Назначь защитников.";}}}else{float dx=490-e.x,dy=365-e.y,d=(float)Math.sqrt(dx*dx+dy*dy);if(d>34){e.x+=dx/d*dt*20;e.y+=dy/d*dt*20;}else{e.attackTimer+=dt;if(e.attackTimer>2){e.attackTimer=0;Building b=nearestBuilding(e.x,e.y);if(b!=null){b.health-=8;if(b.health<=0){buildings.remove(b);notice="Враги разрушили постройку!";}}}}}}}
         Building nearestBuilding(float x,float y){Building best=null;float d=Float.MAX_VALUE;for(Building b:buildings)if(b.done){float z=(b.x-x)*(b.x-x)+(b.y-y)*(b.y-y);if(z<d){d=z;best=b;}}return best;}
         boolean hasBuilding(int type){for(Building b:buildings)if(b.type==type&&b.done)return true;return false;}
         void updatePopulation(float dt){
@@ -250,7 +250,7 @@ public class MainActivity extends Activity {
         Person(String n,float px,float py,boolean m){name=n;x=px;y=py;male=m;homeX=px;homeY=py;}
     }
     static final class Node {float x,y,amount;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;}}
-    static final class Building {float x,y,progress=0,health=100;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
+    static final class Building {float x,y,progress=0,health=100,attackTimer=0;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
     static final class Enemy {float x,y,health=65,attackTimer=0;Enemy(float a,float b){x=a;y=b;}}
     static final class UiButton {float x,y,w,h;String label;UiButton(float a,float b,float c,float d,String s){x=a;y=b;w=c;h=d;label=s;}}
 }
