@@ -169,11 +169,28 @@ class WorldModel {
         if(guardVolley>=0.85f) {
             guardVolley=0f
             val guards=people.filter{it.role==Role.GUARD && it.health>0f}
-            val target=enemies.minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
+            val target=enemies.filter{it.health>0f}
+                .minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
             if(target!=null && guards.any{distance(it.x,it.y,target.x,target.y)<5.2f}) {
                 target.health-=18f
                 lastBattleText="Стража атакует налётчиков"
-                if(target.health<=0f) { stock.food+=4; stock.hides+=1; lastBattleText="Враг повержен: +4 еды, +1 шкура" }
+            }
+            // Watchtowers automatically fire at the nearest raider in range.
+            val towers=buildings.filter{it.type==Structure.WATCHTOWER && it.health>0f}
+            for(tower in towers) {
+                val towerTarget=enemies.filter{it.health>0f && distance(tower.x,tower.y,it.x,it.y)<=6.5f}
+                    .minByOrNull{distance(tower.x,tower.y,it.x,it.y)}
+                if(towerTarget!=null) {
+                    towerTarget.health-=9f
+                    lastBattleText="Сторожевая башня обстреливает врага"
+                }
+            }
+            val defeated=enemies.filter{it.health<=0f}
+            if(defeated.isNotEmpty()) {
+                stock.food+=4*defeated.size
+                stock.hides+=defeated.size
+                enemies.removeAll(defeated.toSet())
+                lastBattleText="Враги повержены: +${4*defeated.size} еды, +${defeated.size} шкур"
             }
         }
         val fallen=people.filter{it.health<=0f}
