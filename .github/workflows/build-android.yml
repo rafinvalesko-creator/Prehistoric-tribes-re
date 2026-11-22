@@ -132,7 +132,7 @@ jobs:
           cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
           find jlmod/app/src/midlet/resources -type f -name '*.class' -delete
           # Keep META-INF/MANIFEST.MF: the original game reads it as a resource at runtime.
-          find jlmod/app/src/midlet/resources/META-INF -type f \\( -iname '*.SF' -o -iname '*.RSA' -o -iname '*.DSA' -o -iname '*.EC' \\) -delete 2>/dev/null || true
+          find jlmod/app/src/midlet/resources/META-INF -type f \( -iname '*.SF' -o -iname '*.RSA' -o -iname '*.DSA' -o -iname '*.EC' \) -delete 2>/dev/null || true
           if [ -f /tmp/prehistoric-jar/META-INF/MANIFEST.MF ]; then
             cp /tmp/prehistoric-jar/META-INF/MANIFEST.MF jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
           else
