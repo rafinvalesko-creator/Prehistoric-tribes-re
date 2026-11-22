@@ -1,0 +1,52 @@
+name: Decompile original MIDlet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  decompile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download CFR
+        run: |
+          curl -fL --retry 3 \
+            https://repo1.maven.org/maven2/org/benf/cfr/0.152/cfr-0.152.jar \
+            -o /tmp/cfr.jar
+
+      - name: Decompile original game JAR
+        run: |
+          test -f original/prehistoric-tribes-0.1.38.jar
+          mkdir -p decompiled
+          java -jar /tmp/cfr.jar original/prehistoric-tribes-0.1.38.jar \
+            --outputdir decompiled --silent true
+
+      - name: Upload decompiled sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: prehistoric-tribes-decompiled
+          path: decompiled/
+          if-no-files-found: error
+
+      - name: Commit decompiled sources
+        run: |
+          if [ -n "$(git status --porcelain decompiled/)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add decompiled/
+            git commit -m "Add CFR-decompiled MIDlet sources"
+            git push
+          else
+            echo "No decompiled source changes."
+          fi
