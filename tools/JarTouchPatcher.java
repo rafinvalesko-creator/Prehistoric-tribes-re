@@ -136,9 +136,38 @@ public final class JarTouchPatcher {
         m.visitJumpInsn(Opcodes.IFLE,shortTap);
         m.visitVarInsn(Opcodes.ALOAD,0);
         m.visitIntInsn(Opcodes.BIPUSH,42);
-        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
+        m.visitMethodInsn(Opcodes.INVOKESPECIAL,TARGET,"touchDispatch","(I)V",false);
         m.visitJumpInsn(Opcodes.GOTO,done);
         m.visitLabel(shortTap);
+        // The original soft-key strip sits at the bottom edge. Map its two corners
+        // to the original left/right soft keys so menus remain reachable without
+        // drawing an Android keyboard over the original game interface.
+        Label notSoftKey = new Label(), notLeftSoftKey = new Label();
+        m.visitVarInsn(Opcodes.ILOAD,2);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"getHeight","()I",false);
+        m.visitIntInsn(Opcodes.BIPUSH,36);
+        m.visitInsn(Opcodes.ISUB);
+        m.visitJumpInsn(Opcodes.IF_ICMPLT,notSoftKey);
+        m.visitVarInsn(Opcodes.ILOAD,1);
+        m.visitIntInsn(Opcodes.BIPUSH,48);
+        m.visitJumpInsn(Opcodes.IF_ICMPGT,notLeftSoftKey);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitIntInsn(Opcodes.BIPUSH,42);
+        m.visitMethodInsn(Opcodes.INVOKESPECIAL,TARGET,"touchDispatch","(I)V",false);
+        m.visitJumpInsn(Opcodes.GOTO,done);
+        m.visitLabel(notLeftSoftKey);
+        m.visitVarInsn(Opcodes.ILOAD,1);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"getWidth","()I",false);
+        m.visitIntInsn(Opcodes.BIPUSH,48);
+        m.visitInsn(Opcodes.ISUB);
+        m.visitJumpInsn(Opcodes.IF_ICMPLT,notSoftKey);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitIntInsn(Opcodes.BIPUSH,35);
+        m.visitMethodInsn(Opcodes.INVOKESPECIAL,TARGET,"touchDispatch","(I)V",false);
+        m.visitJumpInsn(Opcodes.GOTO,done);
+        m.visitLabel(notSoftKey);
         // In the battlefield state, convert the tap position into the game's 22x16 map grid.
         Label notMap = new Label(), mapTap = new Label(), menuTap = new Label(), menuIndexOk = new Label();
         m.visitVarInsn(Opcodes.ALOAD,0);
@@ -203,9 +232,7 @@ public final class JarTouchPatcher {
         m.visitInsn(Opcodes.I2B); m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"A","B");
         m.visitLabel(notMap);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
-        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
-        m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
-        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyReleased","(I)V",false);
+        m.visitMethodInsn(Opcodes.INVOKESPECIAL,TARGET,"touchDispatch","(I)V",false);
         m.visitJumpInsn(Opcodes.GOTO,done);
         m.visitLabel(swipe);
         m.visitVarInsn(Opcodes.ILOAD,3); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
