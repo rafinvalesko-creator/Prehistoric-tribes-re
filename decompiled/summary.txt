@@ -1,0 +1,16 @@
+Summary for original/prehistoric-tribes-0.1.38.jar
+Decompiled with CFR 0.152
+
+
+c
+----------------------------
+
+Z()
+  Unable to fully structure code
+
+
+g
+----------------------------
+
+a(int int boolean boolean )
+  Unable to fully structure code
