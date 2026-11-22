@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
                 for(String a:ps){String[] v=a.split(","); if(v.length>=6){Person q=new Person(v[0],Float.parseFloat(v[1]),Float.parseFloat(v[2]),v[3].equals("1"));q.hunger=Float.parseFloat(v[4]);q.energy=Float.parseFloat(v[5]);people.add(q);}}
                 String[] bs=rows[1].split(";");
                 for(String a:bs){String[] v=a.split(",");if(v.length>=4)buildings.add(new Building(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),v[3].equals("1")));}
-                if(rows.length>=3){String[] ns=rows[2].split(";");for(String a:ns){String[] v=a.split(",");if(v.length>=4){Node n=new Node(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),Float.parseFloat(v[3]));if(v.length>=5)n.regrowTimer=Float.parseFloat(v[4]);nodes.add(n);}}}
+                if(rows.length>=3){String[] ns=rows[2].split(";");for(String a:ns){String[] v=a.split(",");if(v.length>=4){Node n=new Node(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),Float.parseFloat(v[3]));if(v.length>=5)n.regrowTimer=Float.parseFloat(v[4]);if(v.length>=6)n.capacity=Float.parseFloat(v[5]);nodes.add(n);}}}
                 if(people.isEmpty()) newGame();
             } catch(Exception e){newGame();}
         }
@@ -96,7 +96,7 @@ public class MainActivity extends Activity {
             StringBuilder a=new StringBuilder(),b=new StringBuilder(),n=new StringBuilder();
             for(Person q:people){if(a.length()>0)a.append(';');a.append(q.name).append(',').append(q.x).append(',').append(q.y).append(',').append(q.male?1:0).append(',').append(q.hunger).append(',').append(q.energy);}
             for(Building q:buildings){if(b.length()>0)b.append(';');b.append(q.x).append(',').append(q.y).append(',').append(q.type).append(',').append(q.done?1:0);}
-            for(Node q:nodes){if(n.length()>0)n.append(';');n.append(q.x).append(',').append(q.y).append(',').append(q.kind).append(',').append(q.amount).append(',').append(q.regrowTimer);}
+            for(Node q:nodes){if(n.length()>0)n.append(';');n.append(q.x).append(',').append(q.y).append(',').append(q.kind).append(',').append(q.amount).append(',').append(q.regrowTimer).append(',').append(q.capacity);}
             prefs.edit().putInt("food",food).putInt("wood",wood).putInt("stone",stone).putInt("tools",tools).putInt("day",day).putString("state",a+"|"+b+"|"+n).apply();
         }
         void togglePause(){paused=!paused;notice=paused?"Племя отдыхает.":"Продолжаем жить!";invalidate();}
@@ -116,8 +116,8 @@ public class MainActivity extends Activity {
             saveTimer+=dt; if(saveTimer>12){saveTimer=0;save();}
             eventTimer+=dt;
             if(day>=3 && eventTimer>115){eventTimer=0;int count=2+random.nextInt(3);for(int i=0;i<count;i++)enemies.add(new Enemy(1190,145+random.nextInt(390)));notice="ТРЕВОГА! Чужое племя напало на поселение!";}
-            // Berry bushes keep their roots and regrow fruit after being harvested.
-            for(Node n:nodes){if(n.kind==0 && n.amount<=0){n.regrowTimer+=dt;if(n.regrowTimer>=45f){n.amount=90;n.regrowTimer=0;}}}
+            // Every renewable resource stays on the map and slowly replenishes after depletion.
+            for(Node n:nodes){if(n.kind<=2 && n.amount<=0){n.regrowTimer+=dt;if(n.regrowTimer>=75f){n.amount=n.capacity;n.regrowTimer=0;}}}
             for(Person q:people){
                 q.hunger=Math.min(100,q.hunger+dt*(food>0?.65f:1.8f));
                 q.energy=Math.max(0,Math.min(100,q.energy+(q.task==6?dt*5:-dt*.65f)));
@@ -132,8 +132,8 @@ public class MainActivity extends Activity {
                     float dx=target.x-q.x,dy=target.y-q.y,dist=(float)Math.sqrt(dx*dx+dy*dy);
                     if(dist>24){float step=Math.min(dist,dt*36);q.x+=dx/dist*step;q.y+=dy/dist*step;}
                     else {q.work+=dt; if(q.work>2.4f){q.work=0;
-                        // Only berry bushes lose visible harvestable fruit. Trees and rocks are permanent map objects.
-                        if(target.kind==0){target.amount=Math.max(0,target.amount-8);if(target.amount==0){target.regrowTimer=0;q.target=-1;}}
+                        // Berries, wood and stone are limited per node; depleted nodes recover over time.
+                        if(target.kind<=2){target.amount=Math.max(0,target.amount-8);if(target.amount==0){target.regrowTimer=0;q.target=-1;}}
                         if(q.task==0)food+=hasBuilding(2)?10:7; else if(q.task==1)wood+=6; else if(q.task==2)stone+=5; else if(q.task==3)food+=hasBuilding(8)?13:9; else if(q.task==4){food+=12;tools=Math.max(0,tools-1);}
                         food=Math.min(food,hasBuilding(11)?500:250);wood=Math.min(wood,300);stone=Math.min(stone,250);
                     }}
@@ -168,7 +168,7 @@ public class MainActivity extends Activity {
         }
         int countBuildings(){int n=0;for(Building b:buildings)if(b.done)n++;return n;}
         String missionText(){switch(mission){case 0:return "Запаси 120 еды";case 1:return "Собери 100 дерева";case 2:return "Построй 4 здания";case 3:return "Построй ясли";default:return "Племя процветает — исследуй мир";}}
-        boolean resourceAvailable(Node n){return n.kind!=0||n.amount>0;}
+        boolean resourceAvailable(Node n){return n.kind>2||n.amount>0;}
         Node findNode(int task,int idx){if(idx>=0&&idx<nodes.size()){Node n=nodes.get(idx);if(n.kind==task&&resourceAvailable(n))return n;}return null;}
         void assignNearest(Person q,int task){int best=-1;float d=Float.MAX_VALUE;for(int i=0;i<nodes.size();i++){Node n=nodes.get(i);if(n.kind==task&&resourceAvailable(n)){float z=(n.x-q.x)*(n.x-q.x)+(n.y-q.y)*(n.y-q.y);if(z<d){d=z;best=i;}}}q.target=best;if(best<0){q.task=7;notice=task==0?"Ягоды ещё не выросли.":"Поблизости нет подходящего места.";}}
         Building nearestUnfinished(float x,float y){Building best=null;float d=Float.MAX_VALUE;for(Building b:buildings)if(!b.done){float z=(b.x-x)*(b.x-x)+(b.y-y)*(b.y-y);if(z<d){d=z;best=b;}}return best;}
@@ -211,17 +211,22 @@ public class MainActivity extends Activity {
         void drawNode(Canvas c,Node n){
             // Bush silhouette is permanent; only the berries disappear until regrowth.
             if(n.kind==0){p.setColor(Color.rgb(52,126,48));c.drawCircle(n.x,n.y,22,p);c.drawCircle(n.x-13,n.y+5,14,p);c.drawCircle(n.x+13,n.y+5,14,p);if(n.amount>0){p.setColor(Color.rgb(210,45,54));for(int i=0;i<5;i++)c.drawCircle(n.x-10+i*5,n.y-5+(i%2)*10,4,p);}}
-            if(n.kind==1){p.setColor(Color.rgb(112,75,43));c.drawRect(n.x-5,n.y-5,n.x+5,n.y+30,p);p.setColor(Color.rgb(32,105,49));c.drawCircle(n.x,n.y-12,25,p);c.drawCircle(n.x-16,n.y-5,17,p);}
-            if(n.kind==2){p.setColor(Color.rgb(112,115,113));Path z=new Path();z.moveTo(n.x-20,n.y+15);z.lineTo(n.x-10,n.y-17);z.lineTo(n.x+5,n.y-24);z.lineTo(n.x+22,n.y+15);z.close();c.drawPath(z,p);}
+            if(n.kind==1){p.setColor(Color.rgb(80,54,35));c.drawRoundRect(n.x-6,n.y-2,n.x+7,n.y+34,3,3,p);p.setColor(Color.rgb(32,105,49));c.drawCircle(n.x,n.y-16,27,p);c.drawCircle(n.x-18,n.y-5,20,p);c.drawCircle(n.x+17,n.y-4,19,p);p.setColor(Color.rgb(66,137,58));c.drawCircle(n.x-4,n.y-26,13,p);}
+            if(n.kind==2){p.setColor(Color.rgb(94,99,99));Path z=new Path();z.moveTo(n.x-24,n.y+15);z.lineTo(n.x-17,n.y-10);z.lineTo(n.x-3,n.y-24);z.lineTo(n.x+7,n.y-16);z.lineTo(n.x+24,n.y+15);z.close();c.drawPath(z,p);p.setColor(Color.rgb(151,156,151));Path hi=new Path();hi.moveTo(n.x-17,n.y-10);hi.lineTo(n.x-3,n.y-24);hi.lineTo(n.x+1,n.y-8);hi.close();c.drawPath(hi,p);}
             if(n.kind==3){p.setColor(Color.rgb(242,215,127));c.drawOval(n.x-18,n.y-8,n.x+18,n.y+9,p);p.setColor(Color.WHITE);c.drawCircle(n.x,n.y,3,p);}
             if(n.kind==4){p.setColor(Color.rgb(108,65,45));c.drawOval(n.x-17,n.y-12,n.x+18,n.y+12,p);p.setColor(Color.rgb(230,210,170));c.drawCircle(n.x+13,n.y-5,7,p);}
         }
         void drawEnemy(Canvas c,Enemy e){p.setColor(Color.argb(75,20,15,10));c.drawOval(e.x-14,e.y+10,e.x+14,e.y+18,p);p.setColor(Color.rgb(116,42,34));c.drawRoundRect(e.x-10,e.y-4,e.x+10,e.y+17,7,7,p);p.setColor(Color.rgb(205,145,105));c.drawCircle(e.x,e.y-12,9,p);p.setColor(Color.rgb(55,35,28));c.drawRect(e.x-13,e.y-21,e.x+13,e.y-15,p);p.setColor(Color.WHITE);p.setTextSize(10);c.drawText("ВРАГ",e.x-13,e.y+31,p);}
         void drawBuilding(Canvas c,Building b){
             p.setColor(Color.argb(55,20,35,15));c.drawOval(b.x-37,b.y+18,b.x+37,b.y+30,p);
-            p.setColor(b.done?new int[]{0xffa77a48,0xff8d7048,0xffa46f47,0xffbd8a4b,0xff99724c,0xff9c7145,0xff8a6846,0xffbd9a48,0xffa0784c,0xff7e674b,0xffbb9668,0xff997a4c,0xff80634b}[b.type]:Color.GRAY);
-            c.drawRoundRect(b.x-29,b.y-15,b.x+29,b.y+20,7,7,p);
-            p.setColor(Color.rgb(82,49,35));Path roof=new Path();roof.moveTo(b.x-38,b.y-12);roof.lineTo(b.x,b.y-42);roof.lineTo(b.x+38,b.y-12);roof.close();c.drawPath(roof,p);
+            int[] colors={0xffa77a48,0xff8d7048,0xffa46f47,0xffbd8a4b,0xff99724c,0xff9c7145,0xff8a6846,0xffbd9a48,0xffa0784c,0xff7e674b,0xffbb9668,0xff997a4c,0xff80634b};
+            p.setColor(b.done?colors[b.type]:Color.GRAY);
+            // Distinct silhouettes for huts, storage, chief's lodge, workshops and tribal buildings.
+            if(b.type==1||b.type==11){c.drawRect(b.x-30,b.y-13,b.x+30,b.y+22,p);p.setColor(Color.rgb(91,59,37));c.drawRect(b.x-35,b.y-20,b.x+35,b.y-10,p);c.drawRect(b.x-35,b.y-20,b.x-29,b.y+22,p);c.drawRect(b.x+29,b.y-20,b.x+35,b.y+22,p);}
+            else if(b.type==3||b.type==12){c.drawRoundRect(b.x-34,b.y-17,b.x+34,b.y+23,5,5,p);p.setColor(Color.rgb(82,49,35));Path grand=new Path();grand.moveTo(b.x-43,b.y-15);grand.lineTo(b.x,b.y-52);grand.lineTo(b.x+43,b.y-15);grand.close();c.drawPath(grand,p);p.setColor(Color.rgb(214,178,92));c.drawRect(b.x-4,b.y-4,b.x+5,b.y+23,p);}
+            else if(b.type==6){c.drawRect(b.x-18,b.y-10,b.x+18,b.y+25,p);p.setColor(Color.rgb(91,59,37));Path towerRoof=new Path();towerRoof.moveTo(b.x-26,b.y-10);towerRoof.lineTo(b.x,b.y-43);towerRoof.lineTo(b.x+26,b.y-10);towerRoof.close();c.drawPath(towerRoof,p);p.setColor(Color.rgb(225,190,105));c.drawRect(b.x-3,b.y-27,b.x+4,b.y-12,p);}
+            else if(b.type==4||b.type==5||b.type==9){c.drawRect(b.x-31,b.y-12,b.x+31,b.y+22,p);p.setColor(Color.rgb(83,54,35));c.drawRect(b.x-38,b.y-18,b.x+38,b.y-10,p);c.drawRect(b.x-24,b.y-28,b.x+24,b.y-20,p);}
+            else {c.drawRoundRect(b.x-29,b.y-15,b.x+29,b.y+20,7,7,p);p.setColor(Color.rgb(82,49,35));Path roof=new Path();roof.moveTo(b.x-38,b.y-12);roof.lineTo(b.x,b.y-42);roof.lineTo(b.x+38,b.y-12);roof.close();c.drawPath(roof,p);}
             p.setColor(Color.rgb(58,39,29));c.drawRect(b.x-6,b.y+1,b.x+7,b.y+20,p);
             if(!b.done){p.setColor(Color.WHITE);p.setTextSize(15);c.drawText("Строится",b.x-30,b.y-48,p);}
         }
@@ -256,7 +261,7 @@ public class MainActivity extends Activity {
         String name;float x,y,hunger=20,energy=90,health=100,work=0,homeX,homeY;boolean male;int task=7,target=-1;float attackTimer=0;
         Person(String n,float px,float py,boolean m){name=n;x=px;y=py;male=m;homeX=px;homeY=py;}
     }
-    static final class Node {float x,y,amount,regrowTimer=0;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;}}
+    static final class Node {float x,y,amount,regrowTimer=0,capacity;int kind;Node(float a,float b,int k,float n){x=a;y=b;kind=k;amount=n;capacity=n;}}
     static final class Building {float x,y,progress=0,health=100,attackTimer=0;int type;boolean done;Building(float a,float b,int t,boolean d){x=a;y=b;type=t;done=d;}}
     static final class Enemy {float x,y,health=65,attackTimer=0;Enemy(float a,float b){x=a;y=b;}}
     static final class UiButton {float x,y,w,h;String label;UiButton(float a,float b,float c,float d,String s){x=a;y=b;w=c;h=d;label=s;}}
