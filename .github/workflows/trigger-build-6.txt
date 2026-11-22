@@ -1,0 +1,1 @@
+Trigger Android rebuild after fixing MIDlet source copy.
