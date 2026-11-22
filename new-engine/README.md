@@ -29,6 +29,7 @@ These systems are part of the clean-room prototype and are still being balanced.
 
 - Construction rules now include per-building food, wood, and stone costs, free-space checks, and unfinished building health.
 - Guard recruitment converts an available gatherer into a guard and consumes food and hides, with a cap on guard numbers.
+- Archers are trained by holding the seventh action-panel button; training costs 24 food and 4 hides, with a cap of six archers. Archers keep a safer firing distance and deal ranged damage to raiders within 8.5 map units; guards remain stronger at close range.
 
 - Campaign milestones track gathering supplies, expanding housing, repelling the first raid, and unlocking core technologies.
 - Technology progression unlocks improved tool use (faster gathering) and expanded storage capacity.
@@ -75,5 +76,6 @@ Combat update:
 - За каждого побеждённого налётчика, включая убитых в ближнем бою, племя получает 4 единицы еды и 1 шкуру; при смене цели старые приказы не остаются привязанными к погибшему врагу.
 - Стражники на оборонительной позиции поддерживают бой на расстоянии; при критическом ранении они отходят к главному залу.
 - Приказ на обычное перемещение действует до 18 секунд; затем юниты возвращаются к обычным обязанностям.
-- Прямые боевые приказы доступны только стражникам; башни продолжают автоматически поддерживать оборону.
+- Прямые боевые приказы доступны только бойцам (стражникам и лучникам); башни продолжают автоматически поддерживать оборону.
+- Удерживайте кнопку обучения стражи, чтобы вместо стражника обучить лучника (24 еды и 4 шкуры). Лучники стреляют с дистанции, а стражники сильнее в ближнем бою.
 - Состояние оборонительной позиции и текущие приказы сохраняются вместе с игрой.
