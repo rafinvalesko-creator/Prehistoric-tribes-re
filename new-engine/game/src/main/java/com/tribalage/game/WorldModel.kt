@@ -22,7 +22,8 @@ data class Villager(
     var tx:Float, var ty:Float, var taskNode:Int=-1,
     var work:Float=0f, var health:Float=100f, var carrying:Int=0,
     var walkingPhase:Float=0f, var taskBuildingId:Int=-1,
-    var manualOrderTime:Float=0f, var holdPosition:Boolean=false
+    var manualOrderTime:Float=0f, var holdPosition:Boolean=false,
+    var focusTargetId:Int=-1
 )
 
 class WorldModel {
@@ -247,8 +248,8 @@ class WorldModel {
                     }
                     continue
                 }
-                val target=enemies.filter { it.health>0f }
-                    .minByOrNull { distance(p.x,p.y,it.x,it.y) }
+                val target=(if(p.focusTargetId>=0) enemies.firstOrNull { it.id==p.focusTargetId && it.health>0f } else null)
+                    ?: enemies.filter { it.health>0f }.minByOrNull { distance(p.x,p.y,it.x,it.y) }
                 if(target!=null && distance(p.x,p.y,target.x,target.y)<7.0f) {
                     if(distance(p.x,p.y,target.x,target.y)>1.05f) move(p,target.x,target.y,dt,0.92f)
                 } else {
@@ -535,7 +536,7 @@ class WorldModel {
                     .put("tx",v.tx).put("ty",v.ty).put("taskNode",v.taskNode).put("work",v.work)
                     .put("health",v.health).put("carrying",v.carrying).put("walkingPhase",v.walkingPhase)
                     .put("taskBuildingId",v.taskBuildingId).put("manualOrderTime",v.manualOrderTime)
-                    .put("holdPosition",v.holdPosition))
+                    .put("holdPosition",v.holdPosition).put("focusTargetId",v.focusTargetId))
             }
             return array
         }
@@ -592,7 +593,7 @@ class WorldModel {
                     v.optInt("taskNode",-1),v.optDouble("work",0.0).toFloat(),
                     v.optDouble("health",100.0).toFloat().coerceIn(0f,100f),
                     v.optInt("carrying",0),v.optDouble("walkingPhase",0.0).toFloat(),
-                    v.optInt("taskBuildingId",-1),v.optDouble("manualOrderTime",0.0).toFloat().coerceIn(0f,60f),v.optBoolean("holdPosition",false)))
+                    v.optInt("taskBuildingId",-1),v.optDouble("manualOrderTime",0.0).toFloat().coerceIn(0f,60f),v.optBoolean("holdPosition",false),v.optInt("focusTargetId",-1)))
             }
             return result
         }
@@ -712,11 +713,12 @@ class WorldModel {
                 unit.ty=attackTarget.y
                 unit.manualOrderTime=25f
                 unit.holdPosition=false
+                unit.focusTargetId=attackTarget.id
                 unit.taskNode=-1
                 unit.taskBuildingId=-1
                 unit.work=0f
             }
-            lastBattleText="Приказ стражe: атаковать налётчика"
+            lastBattleText="Приказ страже: атаковать налётчика"
             return true
         }
         if(!isWalkable(x,y)) return false
@@ -727,6 +729,7 @@ class WorldModel {
             unit.ty=(y+row*0.28f).coerceIn(0f,height-1f)
             unit.manualOrderTime=if(hold) 60f else 18f
             unit.holdPosition=hold
+            unit.focusTargetId=-1
             unit.taskNode=-1
             unit.taskBuildingId=-1
             unit.work=0f
