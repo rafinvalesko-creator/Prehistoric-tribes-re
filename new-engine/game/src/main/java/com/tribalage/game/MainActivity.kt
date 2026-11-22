@@ -50,17 +50,23 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
         if(event.action!=MotionEvent.ACTION_UP) return true
         val lx=(event.x-offsetX)/viewScale
         val ly=(event.y-offsetY)/viewScale
-        when {
-            lx in 786f..944f && ly in 108f..137f -> model.construct(Structure.HUT)
-            lx in 786f..944f && ly in 144f..173f -> model.construct(Structure.WOODCAMP)
-            lx in 786f..944f && ly in 180f..209f -> model.construct(Structure.QUARRY)
-            lx in 786f..944f && ly in 216f..245f -> model.construct(Structure.WATCHTOWER)
-            lx in 786f..944f && ly in 252f..281f -> model.trainGuard()
+        if(lx !in 786f..944f) return true
+        val action=((ly-106f)/33f).toInt()
+        when(action) {
+            0 -> model.construct(Structure.HUT)
+            1 -> model.construct(Structure.GRANARY)
+            2 -> model.construct(Structure.WOODCAMP)
+            3 -> model.construct(Structure.QUARRY)
+            4 -> model.construct(Structure.HUNTER_CAMP)
+            5 -> model.construct(Structure.WATCHTOWER)
+            6 -> model.construct(Structure.BONFIRE)
+            7 -> model.trainGuard()
             else -> return true
         }
         saveGame()
         return true
     }
+
     override fun surfaceCreated(holder:SurfaceHolder) {
         loadSavedGame()
         running=true
@@ -394,19 +400,28 @@ private class WorldRenderer {
     }
     private fun drawBuildPanel(c:Canvas) {
         p.color=0xe51b2921.toInt()
-        c.drawRoundRect(780f,86f,948f,288f,8f,8f,p)
+        c.drawRoundRect(780f,84f,948f,376f,8f,8f,p)
         p.color=0xffd7c18c.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=12f
-        c.drawText("СТРОИТЕЛЬСТВО",792f,102f,p)
-        val labels=listOf("Хижина","Лесной лагерь","Каменоломня","Сторожевая башня","Обучить стражника")
-        val tops=listOf(108f,144f,180f,216f,252f)
+        c.drawText("СТРОИТЕЛЬСТВО",792f,100f,p)
+        val labels=listOf(
+            "Хижина  Е35 Д24 К8",
+            "Амбар  Е25 Д30 К12",
+            "Лесной лагерь  Е12 Д28 К4",
+            "Каменоломня  Е10 Д20 К16",
+            "Охотничий лагерь  Е16 Д22 К5",
+            "Сторожевая башня  Е8 Д32 К20",
+            "Костёр  Е12 Д18 К4",
+            "Обучить стражника  Е18 Ш2"
+        )
         for(i in labels.indices) {
-            p.color=if(i==4)0xff594832.toInt() else 0xff354a38.toInt()
-            c.drawRoundRect(788f,tops[i],940f,tops[i]+29f,5f,5f,p)
-            p.color=0xffeee0bd.toInt();p.typeface=Typeface.DEFAULT;p.textSize=11f
-            c.drawText(labels[i],797f,tops[i]+19f,p)
+            val top=106f+i*33f
+            p.color=if(i==7)0xff594832.toInt() else 0xff354a38.toInt()
+            c.drawRoundRect(788f,top,940f,top+28f,5f,5f,p)
+            p.color=0xffeee0bd.toInt();p.typeface=Typeface.DEFAULT;p.textSize=10f
+            c.drawText(labels[i],794f,top+18f,p)
         }
         p.color=0xffb8c49d.toInt();p.textSize=9f
-        c.drawText("Нажмите на действие",792f,301f,p)
+        c.drawText("Е — еда · Д — дерево · К — камень · Ш — шкуры",788f,380f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
