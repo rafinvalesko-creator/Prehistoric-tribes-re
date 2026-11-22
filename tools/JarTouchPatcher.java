@@ -36,7 +36,7 @@ public final class JarTouchPatcher {
       out.write(makeReleaseClass());
       out.closeEntry();
     }
-    System.out.println("Touch input patch applied to g.class: tap=confirm, swipe=direction");
+    System.out.println("Touch input patch applied: direct map taps, hand cursor hidden, swipe=direction");
   }
 
   static byte[] readAll(InputStream in) throws IOException {
@@ -68,7 +68,22 @@ public final class JarTouchPatcher {
         if (name.equals("pointerPressed") && desc.equals("(II)V")) hasPress = true;
         if (name.equals("pointerReleased") && desc.equals("(II)V")) hasRelease = true;
         if (name.equals("touchDispatch") && desc.equals("(I)V")) hasDispatch = true;
-        return super.visitMethod(access, name, desc, sig, exceptions);
+        MethodVisitor downstream = super.visitMethod(access, name, desc, sig, exceptions);
+        // Hide only the original battlefield hand sprite, leaving other UI icons intact.
+        if (name.equals("d") && desc.equals("(II)V")) {
+          return new MethodVisitor(Opcodes.ASM9, downstream) {
+            boolean hiddenMapHand;
+            @Override public void visitMethodInsn(int opcode, String owner, String method, String descriptor, boolean isInterface) {
+              if (!hiddenMapHand && owner.equals(TARGET) && method.equals("d") && descriptor.equals("(IIII)V")) {
+                hiddenMapHand = true;
+                for (int i = 0; i < 5; i++) super.visitInsn(Opcodes.POP);
+                return;
+              }
+              super.visitMethodInsn(opcode, owner, method, descriptor, isInterface);
+            }
+          };
+        }
+        return downstream;
       }
       @Override public void visitEnd() {
         if (!hasX) super.visitField(Opcodes.ACC_PRIVATE, "touchStartX", "I", null, null).visitEnd();
@@ -164,12 +179,24 @@ public final class JarTouchPatcher {
         m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"aq","B");
         m.visitJumpInsn(Opcodes.GOTO,notMap);
         m.visitLabel(mapTap);
-        m.visitVarInsn(Opcodes.ALOAD,0); m.visitVarInsn(Opcodes.ILOAD,1);
-        m.visitIntInsn(Opcodes.BIPUSH,22); m.visitInsn(Opcodes.IDIV); m.visitInsn(Opcodes.I2B);
-        m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"y","B");
-        m.visitVarInsn(Opcodes.ALOAD,0); m.visitVarInsn(Opcodes.ILOAD,2);
-        m.visitIntInsn(Opcodes.BIPUSH,16); m.visitInsn(Opcodes.IDIV); m.visitInsn(Opcodes.I2B);
-        m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"A","B");
+        // Invert the game's original cursor-to-screen transform for map tiles.
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitVarInsn(Opcodes.ILOAD,1);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"aH","I");
+        m.visitInsn(Opcodes.ISUB); m.visitIntInsn(Opcodes.BIPUSH,11); m.visitInsn(Opcodes.IADD);
+        m.visitInsn(Opcodes.ICONST_5); m.visitInsn(Opcodes.IDIV);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"W","B"); m.visitInsn(Opcodes.IADD);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"I","B"); m.visitInsn(Opcodes.ISUB);
+        m.visitInsn(Opcodes.I2B); m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"y","B");
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitVarInsn(Opcodes.ILOAD,2);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"aI","I");
+        m.visitInsn(Opcodes.ISUB); m.visitIntInsn(Opcodes.BIPUSH,8); m.visitInsn(Opcodes.IADD);
+        m.visitInsn(Opcodes.ICONST_4); m.visitInsn(Opcodes.IDIV);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"X","B"); m.visitInsn(Opcodes.IADD);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"aJ","B"); m.visitInsn(Opcodes.ISUB);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"K","B"); m.visitInsn(Opcodes.ISUB);
+        m.visitInsn(Opcodes.I2B); m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"A","B");
         m.visitLabel(notMap);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
         m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
