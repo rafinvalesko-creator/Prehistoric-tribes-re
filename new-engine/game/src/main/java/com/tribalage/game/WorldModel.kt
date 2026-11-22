@@ -187,7 +187,7 @@ class WorldModel {
             people += Villager(nextId++,Role.GATHERER,11.5f,8.5f,11.5f,8.5f)
             lastBattleText="В племени родился новый житель"
         }
-        stock.food=stock.food.coerceIn(0,999)
+        stock.food=stock.food.coerceIn(0,if("Хранение запасов" in unlockedTechnologies)1199 else 999)
         stock.wood=stock.wood.coerceIn(0,if("Хранение запасов" in unlockedTechnologies)1199 else 999)
         stock.stone=stock.stone.coerceIn(0,if("Хранение запасов" in unlockedTechnologies)1199 else 999)
         stock.hides=stock.hides.coerceIn(0,999)
