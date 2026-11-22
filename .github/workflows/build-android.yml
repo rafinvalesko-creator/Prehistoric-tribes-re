@@ -60,6 +60,22 @@ jobs:
             jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar \
             /tmp/prehistoric-tribes-touch.jar
           mv /tmp/prehistoric-tribes-touch.jar jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
+          # Bytecode-level regression check: the battlefield renderer must no longer call
+          # the hand/cursor sprite routine from either branch of g.d(int,int).
+          javap -classpath jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar -c -p g > /tmp/patched-game.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path("/tmp/patched-game.txt").read_text()
+          match = re.search(r"private void d\\(int, int\\);(.*?)(?=^  (?:public|private|protected) |\\Z)", text, re.M | re.S)
+          if not match:
+              raise SystemExit("Could not locate battlefield renderer g.d(int,int)")
+          if "Method d:(IIII)V" in match.group(1):
+              raise SystemExit("Hand cursor draw call remains in battlefield renderer")
+          if "pointerPressed(int, int)" not in text or "pointerReleased(int, int)" not in text:
+              raise SystemExit("Direct touch handlers are missing from patched game class")
+          print("Verified: battlefield hand cursor calls removed; direct touch handlers present")
+          PY
           cat > jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java <<'JAVA'
           package ru.playsoftware.j2meloader;
 
@@ -251,6 +267,10 @@ jobs:
           test -f jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
           test -f jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java
           grep -q 'BundledGameActivity' jlmod/app/src/main/AndroidManifest.xml
+          grep -q 'screenOrientation="landscape"' jlmod/app/src/main/AndroidManifest.xml
+          grep -q 'screenWidth = 320' jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java
+          grep -q 'screenHeight = 240' jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java
+          grep -q 'BundledGameActivity.enforceGameProfile()' jlmod/app/src/main/java/ru/woesss/j2me/installer/InstallerDialog.java
 
       - name: Build standalone Android APK
         working-directory: jlmod
