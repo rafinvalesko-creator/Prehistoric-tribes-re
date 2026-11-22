@@ -14,6 +14,7 @@ on:
       - '.github/workflows/trigger-build-8.txt'
       - '.github/workflows/trigger-build-9.txt'
       - '.github/workflows/trigger-build-10.txt'
+      - '.github/workflows/trigger-build-11.txt'
 
 permissions:
   contents: read
