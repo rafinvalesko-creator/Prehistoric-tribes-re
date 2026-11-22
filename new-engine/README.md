@@ -45,3 +45,7 @@ These systems are part of the clean-room prototype and are still being balanced.
 
 Combat behavior:
 - Injured guards below 35 health retreat to the great hall and recover gradually before returning to patrol.
+
+
+Resource exhaustion:
+- Gatherers safely idle near the settlement if all resource nodes have been depleted; the simulation no longer indexes an invalid map tile.
