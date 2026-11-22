@@ -226,11 +226,20 @@ class WorldModel {
                     e.work=0f
                     val guard=people.filter{it.role==Role.GUARD}.minByOrNull{distance(it.x,it.y,e.x,e.y)}
                     if(guard!=null && distance(guard.x,guard.y,e.x,e.y)<1.6f) {
-                        guard.health-=18f
-                        e.health-=35f
+                        guard.health-=14f
+                        e.health-=26f
+                        lastBattleText="Стража сражается с налётчиками"
                     } else {
-                        val wall=buildings.firstOrNull{it.type==Structure.PALISADE}
-                        if(wall!=null) wall.health-=8f else morale=(morale-4).coerceAtLeast(0)
+                        val target=buildings.filter{it.type!=Structure.PALISADE}.minByOrNull{distance(it.x,it.y,e.x,e.y)}
+                        if(target!=null) {
+                            target.health-=9f
+                            lastBattleText="Враги атакуют строение"
+                            if(target.health<=0f) {
+                                buildings.remove(target)
+                                morale=(morale-8).coerceAtLeast(0)
+                                lastBattleText="Строение разрушено!"
+                            }
+                        } else morale=(morale-4).coerceAtLeast(0)
                     }
                 }
             }
