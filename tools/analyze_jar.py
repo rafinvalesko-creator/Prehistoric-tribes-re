@@ -10,8 +10,7 @@ REPORT = Path("analysis/jar_report.txt")
 
 def main():
     if not JAR.exists():
-        print(f"ERROR: JAR not found: {JAR}")
-        return
+        raise SystemExit(f"ERROR: JAR not found: {JAR}")
 
     REPORT.parent.mkdir(parents=True, exist_ok=True)
 
