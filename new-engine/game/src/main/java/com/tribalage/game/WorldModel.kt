@@ -34,6 +34,8 @@ class WorldModel {
         private set
     var population=12
         private set
+    val housingCapacity:Int get() = 5 + buildings.count { it.type==Structure.HUT } * 5
+    val seasonName:String get() = listOf("Весна","Лето","Осень","Зима")[season.coerceIn(0,3)]
     var morale=86
         private set
     var missionText="Развивайте поселение и переживите набеги"
@@ -124,8 +126,15 @@ class WorldModel {
             day++
             season=(day/6)%4
             morale=(morale+if(stock.food>40) 2 else -8).coerceIn(0,100)
-            stock.food=max(0,stock.food-population/2)
-            if(stock.food==0) morale=(morale-12).coerceAtLeast(0)
+            val winterTax=if(season==3) population/2 else 0
+            stock.food=max(0,stock.food-population/2-winterTax)
+            if(stock.food==0) {
+                morale=(morale-12).coerceAtLeast(0)
+                people.filter { it.role!=Role.GUARD }.forEach { it.health=(it.health-5f).coerceAtLeast(0f) }
+                lastBattleText="Голод ослабляет жителей!"
+            } else if(stock.food>population*3) {
+                morale=(morale+2).coerceAtMost(100)
+            }
             missionText=when {
                 day<3 -> "Соберите ресурсы и укрепите поселение"
                 day<6 -> "Подготовьтесь к следующему набегу"
@@ -163,12 +172,16 @@ class WorldModel {
             lastBattleText="Потери племени: "+fallen.size
         }
         growthClock+=dt
-        if(growthClock>36f && population<28 && stock.food>100 && morale>55) {
+        if(growthClock>36f && population<housingCapacity && stock.food>100 && morale>55) {
             growthClock=0f
             population++
             people += Villager(nextId++,Role.GATHERER,11.5f,8.5f,11.5f,8.5f)
+            lastBattleText="В племени родился новый житель"
         }
-        if(stock.wood>0 && buildings.any{it.type==Structure.WOODCAMP}) stock.wood=min(999,stock.wood)
+        stock.food=stock.food.coerceIn(0,999)
+        stock.wood=stock.wood.coerceIn(0,999)
+        stock.stone=stock.stone.coerceIn(0,999)
+        stock.hides=stock.hides.coerceIn(0,999)
     }
 
     private fun updateWorkers(dt:Float) {
@@ -181,7 +194,12 @@ class WorldModel {
                 continue
             }
             if(p.taskNode<0 || p.taskNode>=width*height) {
-                val desired=if(p.role==Role.HUNTER) NodeKind.DEER else if(stock.wood<stock.stone) NodeKind.TREE else NodeKind.BERRY
+                val desired=when {
+                p.role==Role.HUNTER -> NodeKind.DEER
+                stock.food<population*4 -> NodeKind.BERRY
+                stock.wood<stock.stone -> NodeKind.TREE
+                else -> NodeKind.ROCK
+            }
                 val target=findNode(p.x,p.y,desired) ?: findAnyNode(p.x,p.y)
                 if(target!=null) { p.taskNode=target.y*width+target.x; p.tx=target.x.toFloat(); p.ty=target.y.toFloat() }
                 else { p.tx=11.5f; p.ty=8.5f }
@@ -244,7 +262,7 @@ class WorldModel {
                 }
             }
         }
-        enemies.removeAll{it.health<=0f || (it.x<12.4f && it.y>7.4f && it.y<10.5f && it.health<45f)}
+        enemies.removeAll{it.health<=0f}
     }
 
     private fun move(p:Villager,x:Float,y:Float,dt:Float,speed:Float=0.7f) {
