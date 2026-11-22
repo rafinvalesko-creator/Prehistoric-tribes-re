@@ -1,1 +1,1 @@
-Build direct touchscreen controls without virtual joystick; force landscape orientation.
+Direct-touch map selection: remove hand cursor; landscape; no virtual controls.
