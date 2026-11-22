@@ -5,6 +5,10 @@ import android.os.Bundle;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -31,6 +35,9 @@ public class MainActivity extends Activity {
     static final class GameView extends View {
         static final float VW=1280, VH=720;
         final Paint p=new Paint(3);
+        Bitmap originalAtlas;
+        final Rect spriteSrc=new Rect();
+        final RectF spriteDst=new RectF();
         final Random random=new Random(17);
         final ArrayList<Person> people=new ArrayList<>();
         final ArrayList<Node> nodes=new ArrayList<>();
@@ -54,6 +61,7 @@ public class MainActivity extends Activity {
         GameView(Context c) {
             super(c); prefs=c.getSharedPreferences("tribe_save",0);
             setLayerType(View.LAYER_TYPE_SOFTWARE,null);
+            try{originalAtlas=BitmapFactory.decodeStream(c.getAssets().open("tribe_atlas.png"));}catch(Exception ignored){}
             load();
             if (people.isEmpty()) newGame(); else if (nodes.isEmpty()) seedNodes();
         }
@@ -208,11 +216,12 @@ public class MainActivity extends Activity {
             for(Person q:people)drawPerson(c,q,people.indexOf(q)==selected);
             c.restore();
         }
+        void drawSprite(Canvas c,int sx,int sy,int sw,int sh,float x,float y,float w,float h){if(originalAtlas==null)return;spriteSrc.set(sx,sy,sx+sw,sy+sh);spriteDst.set(x,y,x+w,y+h);p.setFilterBitmap(false);c.drawBitmap(originalAtlas,spriteSrc,spriteDst,p);}
         void drawNode(Canvas c,Node n){
             // Bush silhouette is permanent; only the berries disappear until regrowth.
-            if(n.kind==0){p.setColor(Color.rgb(52,126,48));c.drawCircle(n.x,n.y,22,p);c.drawCircle(n.x-13,n.y+5,14,p);c.drawCircle(n.x+13,n.y+5,14,p);if(n.amount>0){p.setColor(Color.rgb(210,45,54));for(int i=0;i<5;i++)c.drawCircle(n.x-10+i*5,n.y-5+(i%2)*10,4,p);}}
-            if(n.kind==1){p.setColor(Color.rgb(80,54,35));c.drawRoundRect(n.x-6,n.y-2,n.x+7,n.y+34,3,3,p);p.setColor(Color.rgb(32,105,49));c.drawCircle(n.x,n.y-16,27,p);c.drawCircle(n.x-18,n.y-5,20,p);c.drawCircle(n.x+17,n.y-4,19,p);p.setColor(Color.rgb(66,137,58));c.drawCircle(n.x-4,n.y-26,13,p);}
-            if(n.kind==2){p.setColor(Color.rgb(94,99,99));Path z=new Path();z.moveTo(n.x-24,n.y+15);z.lineTo(n.x-17,n.y-10);z.lineTo(n.x-3,n.y-24);z.lineTo(n.x+7,n.y-16);z.lineTo(n.x+24,n.y+15);z.close();c.drawPath(z,p);p.setColor(Color.rgb(151,156,151));Path hi=new Path();hi.moveTo(n.x-17,n.y-10);hi.lineTo(n.x-3,n.y-24);hi.lineTo(n.x+1,n.y-8);hi.close();c.drawPath(hi,p);}
+            if(n.kind==0){if(originalAtlas!=null){drawSprite(c,0,0,52,24,n.x-26,n.y-25,52,48);drawSprite(c,0,24,27,27,n.x-24,n.y-7,48,34);}else{p.setColor(Color.rgb(52,126,48));c.drawCircle(n.x,n.y,22,p);c.drawCircle(n.x-13,n.y+5,14,p);c.drawCircle(n.x+13,n.y+5,14,p);}if(n.amount>0){p.setColor(Color.rgb(210,45,54));for(int i=0;i<5;i++)c.drawCircle(n.x-10+i*5,n.y-5+(i%2)*10,3.5f,p);}}
+            if(n.kind==1){if(originalAtlas!=null){drawSprite(c,0,0,13,52,n.x-13,n.y-3,26,42);drawSprite(c,27,0,25,25,n.x-27,n.y-47,54,52);}else{p.setColor(Color.rgb(80,54,35));c.drawRoundRect(n.x-6,n.y-2,n.x+7,n.y+34,3,3,p);p.setColor(Color.rgb(32,105,49));c.drawCircle(n.x,n.y-16,27,p);c.drawCircle(n.x-18,n.y-5,20,p);c.drawCircle(n.x+17,n.y-4,19,p);}}
+            if(n.kind==2){if(originalAtlas!=null){drawSprite(c,52,0,50,28,n.x-25,n.y-27,50,44);}else{p.setColor(Color.rgb(94,99,99));Path z=new Path();z.moveTo(n.x-24,n.y+15);z.lineTo(n.x-17,n.y-10);z.lineTo(n.x-3,n.y-24);z.lineTo(n.x+7,n.y-16);z.lineTo(n.x+24,n.y+15);z.close();c.drawPath(z,p);p.setColor(Color.rgb(151,156,151));Path hi=new Path();hi.moveTo(n.x-17,n.y-10);hi.lineTo(n.x-3,n.y-24);hi.lineTo(n.x+1,n.y-8);hi.close();c.drawPath(hi,p);}}
             if(n.kind==3){p.setColor(Color.rgb(242,215,127));c.drawOval(n.x-18,n.y-8,n.x+18,n.y+9,p);p.setColor(Color.WHITE);c.drawCircle(n.x,n.y,3,p);}
             if(n.kind==4){p.setColor(Color.rgb(108,65,45));c.drawOval(n.x-17,n.y-12,n.x+18,n.y+12,p);p.setColor(Color.rgb(230,210,170));c.drawCircle(n.x+13,n.y-5,7,p);}
         }
