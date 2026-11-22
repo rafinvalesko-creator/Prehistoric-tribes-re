@@ -225,7 +225,7 @@ class WorldModel {
         p.x+=dx/d*step; p.y+=dy/d*step
     }
     private fun findNode(x:Float,y:Float,k:NodeKind):MapTile? =
-        tiles.asSequence().flatten().filter{it.node==k && it.amount>0}.minByOrNull{distance(x,y,it.x.toFloat(),it.y.toFloat())}
+        tiles.asSequence().flatMap { row -> row.asSequence() }.filter{it.node==k && it.amount>0}.minByOrNull{distance(x,y,it.x.toFloat(),it.y.toFloat())}
     private fun findAnyNode(x:Float,y:Float):MapTile? =
         tiles.asSequence().flatten().filter{it.node!=null && it.amount>0}.minByOrNull{distance(x,y,it.x.toFloat(),it.y.toFloat())}
     private fun distance(x:Float,y:Float,xx:Float,yy:Float):Float {
