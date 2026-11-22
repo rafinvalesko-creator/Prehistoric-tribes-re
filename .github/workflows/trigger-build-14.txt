@@ -1,1 +1,1 @@
-Build tap-to-map, command menu tap and long-press gesture.
+Build direct touchscreen controls without virtual joystick; force landscape orientation.
