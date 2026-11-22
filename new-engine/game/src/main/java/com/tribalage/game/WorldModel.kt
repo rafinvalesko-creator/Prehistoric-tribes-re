@@ -19,7 +19,7 @@ data class Villager(
     val id:Int, val role:Role, var x:Float, var y:Float,
     var tx:Float, var ty:Float, var taskNode:Int=-1,
     var work:Float=0f, var health:Float=100f, var carrying:Int=0,
-    var walkingPhase:Float=0f
+    var walkingPhase:Float=0f, var taskBuildingId:Int=-1
 )
 
 class WorldModel {
@@ -193,6 +193,25 @@ class WorldModel {
                 if(distance(p.x,p.y,homeX,homeY)>0.25f) move(p,homeX,homeY,dt)
                 continue
             }
+            if(p.role==Role.BUILDER) {
+                val damaged=buildings.filter { it.health<100f }.minByOrNull { distance(p.x,p.y,it.x,it.y) }
+                if(damaged==null) {
+                    p.taskBuildingId=-1
+                    if(distance(p.x,p.y,11.5f,8.5f)>0.3f) move(p,11.5f,8.5f,dt)
+                } else {
+                    p.taskBuildingId=damaged.id
+                    if(distance(p.x,p.y,damaged.x,damaged.y)>0.28f) move(p,damaged.x,damaged.y,dt)
+                    else {
+                        p.work+=dt
+                        if(p.work>=1.4f) {
+                            p.work=0f
+                            damaged.health=(damaged.health+5f).coerceAtMost(100f)
+                            lastBattleText="Строитель ремонтирует поселение"
+                        }
+                    }
+                }
+                continue
+            }
             if(p.taskNode<0 || p.taskNode>=width*height) {
                 val desired=when {
                 p.role==Role.HUNTER -> NodeKind.DEER
@@ -282,5 +301,8 @@ class WorldModel {
     }
 
     fun visibleBuildings()=buildings.toList()
-    fun addStructure(type:Structure,x:Float,y:Float) { buildings+=StructureState(nextId++,type,x,y) }
+    fun addStructure(type:Structure,x:Float,y:Float) {
+        buildings+=StructureState(nextId++,type,x,y)
+        if(type==Structure.HUT) lastBattleText="Построено новое жильё"
+    }
 }
