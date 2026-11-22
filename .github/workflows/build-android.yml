@@ -10,6 +10,7 @@ on:
       - '.github/workflows/trigger-build-4.txt'
       - '.github/workflows/trigger-build-5.txt'
       - '.github/workflows/trigger-build-6.txt'
+      - '.github/workflows/trigger-build-7.txt'
 
 permissions:
   contents: read
