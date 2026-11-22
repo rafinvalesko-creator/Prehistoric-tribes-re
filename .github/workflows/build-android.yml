@@ -50,7 +50,10 @@ jobs:
           set -euo pipefail
           test -f original/prehistoric-tribes-0.1.38.jar
           mkdir -p jlmod/app/src/midlet/java jlmod/app/src/midlet/resources/MIDLET-META-INF
-          cp decompiled/*.java jlmod/app/src/midlet/java/
+          curl -fL --retry 3 https://github.com/mstrobel/procyon/releases/download/v0.6.0/procyon-decompiler-0.6.0.jar -o /tmp/procyon.jar
+          java -jar /tmp/procyon.jar -o decompiled-procyon original/prehistoric-tribes-0.1.38.jar
+          find decompiled-procyon -type f -name '*.java' -exec cp {} jlmod/app/src/midlet/java/ \\;
+          test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
           unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
           chmod -R u+rwX /tmp/prehistoric-jar
           cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
