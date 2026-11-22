@@ -1,23 +1,13 @@
-name: Build Prehistoric Tribes Android APK
+name: Build Prehistoric Tribes standalone Android APK
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - '.github/workflows/trigger-build.txt'
-      - '.github/workflows/trigger-build-2.txt'
-      - '.github/workflows/trigger-build-3.txt'
-      - '.github/workflows/trigger-build-4.txt'
-      - '.github/workflows/trigger-build-5.txt'
-      - '.github/workflows/trigger-build-6.txt'
-      - '.github/workflows/trigger-build-7.txt'
-      - '.github/workflows/trigger-build-8.txt'
-      - '.github/workflows/trigger-build-9.txt'
-      - '.github/workflows/trigger-build-10.txt'
-      - '.github/workflows/trigger-build-11.txt'
-      - '.github/workflows/trigger-build-12.txt'
+      - '.github/workflows/build-android.yml'
       - '.github/workflows/trigger-build-13.txt'
       - '.github/workflows/trigger-build-14.txt'
+      - 'original/prehistoric-tribes-0.1.38.jar'
 
 permissions:
   contents: read
@@ -55,117 +45,188 @@ jobs:
           yes | "$SDKMANAGER" --licenses
           "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670"
 
-      - name: Prepare MIDlet source and resources
+      - name: Prepare embedded original game and launcher
         shell: bash
         run: |
           set -euo pipefail
           test -f original/prehistoric-tribes-0.1.38.jar
-          mkdir -p jlmod/app/src/midlet/java jlmod/app/src/midlet/resources/MIDLET-META-INF
-          curl -fL --retry 3 https://github.com/skylot/jadx/releases/download/v1.5.2/jadx-1.5.2.zip -o /tmp/jadx.zip
-          mkdir -p /tmp/jadx
-          unzip -q /tmp/jadx.zip -d /tmp/jadx
-          /tmp/jadx/bin/jadx --no-res --show-bad-code -d decompiled-jadx original/prehistoric-tribes-0.1.38.jar
-          cp -a decompiled-jadx/sources/. jlmod/app/src/midlet/java/
           python3 -m compileall -q tools
-          if grep -R -n 'Method not decompiled:' jlmod/app/src/midlet/java --include='*.java'; then
-            echo 'JADX left runtime-failing method stubs; refusing to package an incomplete game.' >&2
-            exit 1
-          fi
-          # Repair known JADX type-inference and name-shadowing errors using the original bytecode structure.
+          mkdir -p jlmod/app/src/main/assets jlmod/app/src/main/java/ru/playsoftware/j2meloader
+          cp original/prehistoric-tribes-0.1.38.jar jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
+          cat > jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java <<'JAVA'
+          package ru.playsoftware.j2meloader;
+
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.view.Gravity;
+          import android.widget.TextView;
+
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.lifecycle.ViewModelProvider;
+          import androidx.preference.PreferenceManager;
+
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.IOException;
+          import java.io.InputStream;
+
+          import ru.playsoftware.j2meloader.applist.AppListModel;
+          import ru.playsoftware.j2meloader.config.Config;
+          import ru.playsoftware.j2meloader.config.ProfileModel;
+          import ru.playsoftware.j2meloader.config.ProfilesManager;
+          import ru.playsoftware.j2meloader.util.Constants;
+          import ru.playsoftware.j2meloader.util.FileUtils;
+          import ru.woesss.j2me.installer.InstallerDialog;
+
+          public final class BundledGameActivity extends AppCompatActivity {
+              private static final String GAME_NAME = "Prehistoric Tribes";
+              private static final String GAME_DIR = "Prehistoric Tribes";
+              private static final String JAR_ASSET = "prehistoric-tribes-0.1.38.jar";
+
+              private TextView status;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  status = new TextView(this);
+                  status.setGravity(Gravity.CENTER);
+                  status.setText("Запуск «Первобытные войны»...");
+                  setContentView(status);
+
+                  File externalFiles = getExternalFilesDir(null);
+                  if (externalFiles == null) {
+                      status.setText("Память приложения недоступна.");
+                      return;
+                  }
+
+                  File workDir = new File(externalFiles, "game-runtime");
+                  PreferenceManager.getDefaultSharedPreferences(this).edit()
+                          .putString(Constants.PREF_EMULATOR_DIR, workDir.getAbsolutePath())
+                          .apply();
+
+                  if (!FileUtils.initWorkDir(workDir)) {
+                      status.setText("Не удалось создать папку игры.");
+                      return;
+                  }
+
+                  AppListModel appListModel = new ViewModelProvider(this).get(AppListModel.class);
+                  appListModel.setEmulatorDirectory(workDir.getAbsolutePath());
+
+                  try {
+                      ensureDefaultProfile();
+                      launchOrInstall();
+                  } catch (Exception e) {
+                      status.setText("Ошибка подготовки игры: " + e.getMessage());
+                  }
+              }
+
+              private void ensureDefaultProfile() throws IOException {
+                  File profileDir = new File(Config.getConfigsDir(), GAME_DIR);
+                  if (!profileDir.isDirectory() && !profileDir.mkdirs()) {
+                      throw new IOException("Не удалось создать настройки игры");
+                  }
+                  File configFile = new File(profileDir, "config.json");
+                  if (!configFile.isFile()) {
+                      ProfileModel profile = new ProfileModel(profileDir);
+                      profile.orientation = 2;
+                      profile.touchInput = true;
+                      profile.showKeyboard = true;
+                      if (!ProfilesManager.saveConfig(profile)) {
+                          throw new IOException("Не удалось сохранить настройки сенсорного управления");
+                      }
+                  }
+              }
+
+              private void launchOrInstall() throws IOException {
+                  File appDir = new File(Config.getAppDir(), GAME_DIR);
+                  File jar = new File(appDir, "res.jar");
+                  File dex = new File(appDir, "converted.zip");
+
+                  if (jar.isFile() && dex.isFile()) {
+                      Config.startApp(this, GAME_NAME, appDir.getAbsolutePath());
+                      finish();
+                      return;
+                  }
+
+                  if (appDir.exists()) {
+                      FileUtils.deleteDirectory(appDir);
+                  }
+
+                  File bundledJar = new File(getCacheDir(), JAR_ASSET);
+                  try (InputStream input = getAssets().open(JAR_ASSET);
+                       FileOutputStream output = new FileOutputStream(bundledJar)) {
+                      byte[] buffer = new byte[8192];
+                      int read;
+                      while ((read = input.read(buffer)) != -1) {
+                          output.write(buffer, 0, read);
+                      }
+                  }
+
+                  status.setText("Первый запуск: установите встроенную игру в открывшемся окне.\nНажмите сюда, если нужно повторить установку.");
+                  status.setOnClickListener(v -> showInstaller(bundledJar));
+                  showInstaller(bundledJar);
+              }
+
+              private void showInstaller(File jar) {
+                  if (isFinishing() || getSupportFragmentManager().findFragmentByTag("installer") != null) {
+                      return;
+                  }
+                  InstallerDialog.newInstance(Uri.fromFile(jar))
+                          .show(getSupportFragmentManager(), "installer");
+              }
+          }
+          JAVA
           python3 - <<'PY'
           from pathlib import Path
-          root = Path('jlmod/app/src/midlet/java/defpackage')
-          p = root / 'f.java'
-          s = p.read_text()
-          s = s.replace('this.a.f243b = new short[11];', 'this.a.f243b = new short[11][];')
-          s = s.replace('this.a.f244j = new byte[25];', 'this.a.f244j = new byte[25][];')
-          s = s.replace('this.a.f242a = new Image[3];', 'this.a.f242a = new Image[3][];')
-          p.write_text(s)
-          p = root / 'g.java'
-          s = p.read_text()
-          s = s.replace('this.f245b = new int[]{new int[]{', 'this.f245b = new int[][]{new int[]{')
-          s = s.replace('Object[] objArr = false;', 'boolean objArr = false;')
-          s = s.replace('                } else {\n                    return;\n                }\n                break;\n            case 1055:', '                } else {\n                    return;\n                }\n            case 1055:')
-          s = s.replace('                    b6 = (byte) (b7 + 1);\n                }\n            }\n            b4 =', '                    b6 = (byte) (b7 + 1);\n                } else {\n                    break;\n                }\n            }\n            b4 =')
-          s = s.replace('                    b10 = (byte) (b11 + 1);\n                }\n            }\n            b8 =', '                    b10 = (byte) (b11 + 1);\n                } else {\n                    break;\n                }\n            }\n            b8 =')
-          s = s.replace('                    b16 = (byte) (b17 + 1);\n                }\n            }\n            b12 =', '                    b16 = (byte) (b17 + 1);\n                } else {\n                    break;\n                }\n            }\n            b12 =')
-          s = s.replace('        if (recordStoreOpenRecordStore != null) {\n            recordStoreOpenRecordStore.closeRecordStore();\n        }', '        if (recordStoreOpenRecordStore != null) {\n            try { recordStoreOpenRecordStore.closeRecordStore(); } catch (Exception ignored) { }\n        }')
-          s = s.replace('            this.f150a = new a("audio/midi");', '            try { this.f150a = new a("audio/midi"); } catch (Exception ignored) { this.f150a = null; }')
-          if 'this.f150a.a(this.f146e);' not in s:
-              raise SystemExit('Expected optional MIDI playback call not found')
-          s = s.replace('        this.f150a.a(this.f146e);', '        if (this.f150a != null) {\n            this.f150a.a(this.f146e);\n        }', 1)
-          p.write_text(s)
-          p = root / 'd.java'
-          s = p.read_text().replace('g.', 'defpackage.g.')
-          s = s.replace('Strindefpackage.g.valueOf', 'String.valueOf')
-          p.write_text(s)
-          p = root / 'b.java'
-          s = p.read_text()
-          s = s.replace('this.f0a = Connector.open(this.c);', 'this.f0a = (MessageConnection) Connector.open(this.c);')
-          s = s.replace('TextMessage textMessageNewMessage = this.f0a.newMessage("text");', 'TextMessage textMessageNewMessage = (TextMessage) this.f0a.newMessage("text");')
-          p.write_text(s)
-          p = root / 'c.java'
-          s = p.read_text()
-          method_start = s.index('    private void al()')
-          case_start = s.index('                case 1:', method_start)
-          loop_start = s.index('                    while (true) {', case_start)
-          loop_end = s.index('                    if (this.f80O <', loop_start)
-          old_loop = s[loop_start:loop_end]
-          if old_loop.count('while (true)') != 1 or 'this.f49v <= 30' not in old_loop:
-              raise SystemExit('Expected al() search loop not found; refusing unsafe patch')
-          new_loop = (
-              '                    while (this.f49v <= 30) {\n'
-              '                        if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {\n'
-              '                            this.f49v++;\n'
-              '                        } else {\n'
-              '                            this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);\n'
-              '                            break;\n'
-              '                        }\n'
-              '                    }\n'
+          import re
+
+          root = Path("jlmod")
+          gradle = root / "app/build.gradle.kts"
+          s = gradle.read_text()
+          old = 'create("emulator") { // variant dimension for create emulator\n            buildConfigField("boolean", "FULL_EMULATOR", "true")'
+          new = 'create("emulator") { // variant dimension for create emulator\n            applicationId = "com.prehistorictribes.game"\n            versionName = "0.1.38"\n            buildConfigField("boolean", "FULL_EMULATOR", "true")'
+          if old not in s:
+              raise SystemExit("JL-Mod emulator flavor block changed; refusing unsafe edit")
+          s = s.replace(old, new, 1)
+          s = s.replace('resValue("string", "app_name", "JL-Debug")',
+                        'resValue("string", "app_name", "Prehistoric Tribes")', 1)
+          gradle.write_text(s)
+
+          manifest = root / "app/src/main/AndroidManifest.xml"
+          s = manifest.read_text()
+          if s.count('android:name=".MainActivity"') != 1:
+              raise SystemExit("Expected one MainActivity manifest entry")
+          s = s.replace('android:name=".MainActivity"', 'android:name=".BundledGameActivity"', 1)
+          s = s.replace('    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"\n        android:minSdkVersion="30"\n        tools:ignore="ScopedStorage" />\n', '')
+          s = s.replace('    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"\n        android:maxSdkVersion="29" />\n', '')
+          manifest.write_text(s)
+
+          installer = root / "app/src/main/java/ru/woesss/j2me/installer/InstallerDialog.java"
+          s = installer.read_text()
+          pattern = re.compile(r'(?m)^(\s*)Config\.startApp\(v\.getContext\(\), app\.getTitle\(\), app\.getPathExt\(\)\);')
+          s, count = pattern.subn(
+              lambda m: m.group(1) + 'Config.startApp(v.getContext(), app.getTitle(), app.getPathExt());\n'
+                        + m.group(1) + 'if (getActivity() != null) getActivity().finish();',
+              s
           )
-          s = s[:loop_start] + new_loop + s[loop_end:]
-          p.write_text(s)
+          if count < 1:
+              raise SystemExit("Installer success launch hook not found")
+          installer.write_text(s)
           PY
-          test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
-          unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
-          chmod -R u+rwX /tmp/prehistoric-jar
-          cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
-          find jlmod/app/src/midlet/resources -type f -name '*.class' -delete
-          # Keep META-INF/MANIFEST.MF: the original game reads it as a resource at runtime.
-          find jlmod/app/src/midlet/resources/META-INF -type f \( -iname '*.SF' -o -iname '*.RSA' -o -iname '*.DSA' -o -iname '*.EC' \) -delete 2>/dev/null || true
-          if [ -f /tmp/prehistoric-jar/META-INF/MANIFEST.MF ]; then
-            cp /tmp/prehistoric-jar/META-INF/MANIFEST.MF jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
-          else
-            echo "Original MIDlet manifest is missing" >&2
-            exit 1
-          fi
-          sed -i 's/^MIDlet-Name:.*/MIDlet-Name: Prehistoric Tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
-          sed -i 's/^MIDlet-1:.*/MIDlet-1: Prehistoric Tribes, , defpackage.tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
-          sed -i 's/^MIDlet-Version:.*/MIDlet-Version: 0.1.38/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
-          echo "MIDlet source files: $(find jlmod/app/src/midlet/java -name '*.java' | wc -l)"
-          echo "Resource files: $(find jlmod/app/src/midlet/resources -type f | wc -l)"
-          cat jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          sed -i 's/rootProject.name = "JL-Mod"/rootProject.name = "Prehistoric-Tribes"/' jlmod/settings.gradle.kts
+          test -f jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
+          test -f jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java
+          grep -q 'BundledGameActivity' jlmod/app/src/main/AndroidManifest.xml
 
-      - name: Set application project name
-        run: sed -i 's/rootProject.name = "JL-Mod"/rootProject.name = "Prehistoric-Tribes"/' jlmod/settings.gradle.kts
-
-      - name: Build MIDlet debug APK
+      - name: Build standalone Android APK
         working-directory: jlmod
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon :app:assembleMidletDebug
-
-      - name: Save decompiled sources for diagnosis
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prehistoric-tribes-decompiled-sources
-          path: jlmod/app/src/midlet/java/**/*.java
-          if-no-files-found: warn
+          ./gradlew --no-daemon :app:assembleEmulatorDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: prehistoric-tribes-android-debug
-          path: jlmod/app/build/outputs/apk/midlet/debug/*.apk
+          path: jlmod/app/build/outputs/apk/emulator/debug/*.apk
           if-no-files-found: error
