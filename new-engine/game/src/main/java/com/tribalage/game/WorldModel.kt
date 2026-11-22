@@ -251,9 +251,18 @@ class WorldModel {
                 else -> NodeKind.ROCK
             }
                 val target=findNode(p.x,p.y,desired) ?: findAnyNode(p.x,p.y)
-                if(target!=null) { p.taskNode=target.y*width+target.x; p.tx=target.x.toFloat(); p.ty=target.y.toFloat() }
-                else { p.tx=11.5f; p.ty=8.5f }
+                if(target!=null) {
+                    p.taskNode=target.y*width+target.x
+                    p.tx=target.x.toFloat()
+                    p.ty=target.y.toFloat()
+                } else {
+                    p.taskNode=-1
+                    p.work=0f
+                    if(distance(p.x,p.y,11.5f,8.5f)>0.25f) move(p,11.5f,8.5f,dt)
+                    continue
+                }
             }
+            if(p.taskNode<0 || p.taskNode>=width*height) continue
             val tile=tiles[p.taskNode/width][p.taskNode%width]
             if(p.carrying==0) {
                 if(distance(p.x,p.y,p.tx,p.ty)>0.22f) move(p,p.tx,p.ty,dt)
