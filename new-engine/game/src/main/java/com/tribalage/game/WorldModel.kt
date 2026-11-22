@@ -197,6 +197,22 @@ class WorldModel {
         for(p in people) {
             p.walkingPhase+=dt*7f
             if(p.role==Role.GUARD) {
+                if(p.health<35f) {
+                    val hall=buildings.firstOrNull { it.type==Structure.GREAT_HALL }
+                    val homeX=hall?.x ?: 11.5f
+                    val homeY=hall?.y ?: 7.5f
+                    if(distance(p.x,p.y,homeX,homeY)>0.8f) {
+                        move(p,homeX,homeY,dt,0.82f)
+                    } else {
+                        p.work+=dt
+                        if(p.work>=1.2f) {
+                            p.work=0f
+                            p.health=(p.health+4f).coerceAtMost(65f)
+                            lastBattleText="Раненый стражник восстанавливает силы"
+                        }
+                    }
+                    continue
+                }
                 val target=enemies.filter { it.health>0f }
                     .minByOrNull { distance(p.x,p.y,it.x,it.y) }
                 if(target!=null && distance(p.x,p.y,target.x,target.y)<7.0f) {
