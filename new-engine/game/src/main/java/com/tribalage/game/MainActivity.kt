@@ -14,6 +14,7 @@ import android.view.SurfaceView
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.max
 
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,192 +33,297 @@ class MainActivity : Activity() {
 }
 
 private class TribalWorldView(context: android.content.Context) : SurfaceView(context), SurfaceHolder.Callback, Runnable {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    @Volatile private var running = false
-    private var loop: Thread? = null
-    private var startedAt = System.nanoTime()
-    private var lastTick = startedAt
-    private var food = 120
-    private var wood = 85
-    private var stone = 42
-    private var population = 8
-    private var day = 1
-    private var phase = 0f
+    private val model=WorldModel()
+    private val renderer=WorldRenderer()
+    @Volatile private var running=false
+    private var loop:Thread?=null
+    private var lastTick=System.nanoTime()
 
-    private val grass = intArrayOf(0xff668b43.toInt(), 0xff72964b.toInt(), 0xff789d50.toInt(), 0xff628340.toInt())
-    private val map = Array(15) { x -> IntArray(9) { y -> ((x * 13 + y * 7 + x * y) % 4) } }
-
-    init { holder.addCallback(this); isFocusable = true }
-
-    override fun surfaceCreated(holder: SurfaceHolder) { running = true; loop = Thread(this, "tribal-render").also { it.start() } }
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
-    override fun surfaceDestroyed(holder: SurfaceHolder) { running = false; try { loop?.join(500) } catch (_: InterruptedException) {} }
-
+    init { holder.addCallback(this); isFocusable=true }
+    override fun surfaceCreated(holder:SurfaceHolder) {
+        running=true
+        lastTick=System.nanoTime()
+        loop=Thread(this,"tribal-world-loop").also{it.start()}
+    }
+    override fun surfaceChanged(holder:SurfaceHolder,format:Int,width:Int,height:Int) {}
+    override fun surfaceDestroyed(holder:SurfaceHolder) {
+        running=false
+        try { loop?.join(700) } catch (_:InterruptedException) {}
+    }
     override fun run() {
-        while (running) {
-            val now = System.nanoTime()
-            val dt = ((now - lastTick) / 1_000_000_000.0).toFloat().coerceIn(0f, 0.1f)
-            lastTick = now
-            phase += dt
-            if (phase >= 5f) {
-                phase -= 5f
-                day++
-                food += 2
-                wood += 1
-                if (food > 180 && population < 12) { population++; food -= 18 }
-                if (food > 0) food--
-            }
-            val canvas = try { holder.lockCanvas() } catch (_: Exception) { null }
-            if (canvas != null) {
-                drawWorld(canvas)
+        while(running) {
+            val now=System.nanoTime()
+            val dt=((now-lastTick)/1_000_000_000.0).toFloat().coerceIn(0f,0.05f)
+            lastTick=now
+            model.update(dt)
+            val canvas=try{holder.lockCanvas()}catch(_:Exception){null}
+            if(canvas!=null) {
+                renderer.draw(canvas,width,height,model)
                 holder.unlockCanvasAndPost(canvas)
             }
-            try { Thread.sleep(16) } catch (_: InterruptedException) {}
+            try{Thread.sleep(16)}catch(_:InterruptedException){}
         }
     }
+}
 
-    private fun drawWorld(c: Canvas) {
-        val scale = min(width / 960f, height / 432f)
-        val ox = (width - 960f * scale) / 2f
-        val oy = (height - 432f * scale) / 2f
-        c.save()
-        c.translate(ox, oy); c.scale(scale, scale)
-        c.drawColor(0xff172b24.toInt())
-        paint.style = Paint.Style.FILL
-        paint.color = 0xffb9a16b.toInt()
-        c.drawRect(0f, 0f, 960f, 432f, paint)
-        drawTerrain(c)
-        drawSettlement(c)
-        drawPeople(c)
-        drawAtmosphere(c)
-        drawHud(c)
+private class WorldRenderer {
+    private val p=Paint(Paint.ANTI_ALIAS_FLAG)
+    private val tilePath=Path()
+    private val baseW=960f
+    private val baseH=432f
+    private val tileW=35f
+    private val tileH=18f
+    private fun sx(x:Float,y:Float)=480f+(x-y)*17.5f
+    private fun sy(x:Float,y:Float)=65f+(x+y)*9f
+
+    fun draw(c:Canvas,w:Int,h:Int,world:WorldModel) {
+        val scale=min(w/baseW,h/baseH)
+        val ox=(w-baseW*scale)/2f
+        val oy=(h-baseH*scale)/2f
+        c.save(); c.translate(ox,oy); c.scale(scale,scale)
+        c.drawColor(0xff192923.toInt())
+        p.style=Paint.Style.FILL
+        drawGround(c,world)
+        drawDecor(c,world)
+        drawBuildings(c,world)
+        drawUnits(c,world)
+        drawLighting(c,world)
+        drawInterface(c,world)
         c.restore()
     }
 
-    private fun iso(x: Int, y: Int): Pair<Float, Float> {
-        val px = 480f + (x - y) * 29f
-        val py = 225f + (x + y) * 15f
-        return px to py
-    }
-
-    private fun drawTerrain(c: Canvas) {
-        for (x in 0 until 15) for (y in 0 until 9) {
-            val (px, py) = iso(x, y)
-            val p = Path().apply {
-                moveTo(px, py - 16f); lineTo(px + 30f, py); lineTo(px, py + 16f); lineTo(px - 30f, py); close()
+    private fun drawGround(c:Canvas,world:WorldModel) {
+        for(y in 0 until world.height) for(x in 0 until world.width) {
+            val cx=sx(x.toFloat(),y.toFloat())
+            val cy=sy(x.toFloat(),y.toFloat())
+            val path=diamond(cx,cy,tileW,tileH)
+            p.color=when(world.tiles[y][x].ground) {
+                Ground.GRASS -> intArrayOf(0xff668d48.toInt(),0xff70964c.toInt(),0xff789c50.toInt(),0xff628342.toInt())[(x*7+y*11)%4]
+                Ground.DARK_GRASS -> 0xff526f3d.toInt()
+                Ground.SAND -> 0xffb4a06b.toInt()
+                Ground.WATER -> 0xff397d8a.toInt()
+                Ground.MUD -> 0xff776b4c.toInt()
             }
-            paint.color = grass[map[x][y]]
-            c.drawPath(p, paint)
-            paint.color = 0x22502d1c
-            paint.style = Paint.Style.STROKE; paint.strokeWidth = 1f; c.drawPath(p, paint); paint.style = Paint.Style.FILL
-            if ((x * 17 + y * 23) % 11 == 0 && x !in 5..9) drawTree(c, px, py - 10f, (x + y) % 2 == 0)
-            if ((x * 7 + y * 19) % 23 == 0) drawStone(c, px + 5f, py - 4f)
-            if ((x * 5 + y * 3) % 29 == 0) drawBush(c, px - 8f, py - 4f)
+            c.drawPath(path,p)
+            p.color=0x303b492e
+            p.style=Paint.Style.STROKE; p.strokeWidth=0.8f
+            c.drawPath(path,p); p.style=Paint.Style.FILL
+            if(world.tiles[y][x].ground==Ground.WATER) {
+                p.color=0x558dc5c5
+                c.drawLine(cx-8f,cy-1f,cx+5f,cy-1f,p)
+                if((x+y)%3==0)c.drawLine(cx-2f,cy+3f,cx+9f,cy+3f,p)
+            }
         }
-        // Winding stream
-        val stream = Path().apply {
-            moveTo(80f, 365f); cubicTo(220f, 315f, 190f, 270f, 330f, 250f)
-            cubicTo(440f, 225f, 430f, 165f, 555f, 155f)
-        }
-        paint.color = 0xff4b9aab.toInt(); paint.style = Paint.Style.STROKE; paint.strokeWidth = 13f; c.drawPath(stream, paint)
-        paint.color = 0xff8dc7c2.toInt(); paint.strokeWidth = 3f; c.drawPath(stream, paint); paint.style = Paint.Style.FILL
     }
 
-    private fun drawTree(c: Canvas, x: Float, y: Float, pine: Boolean) {
-        paint.color = 0xff59412b.toInt(); c.drawRect(x - 3f, y - 17f, x + 3f, y + 2f, paint)
-        paint.color = if (pine) 0xff315b35.toInt() else 0xff426f38.toInt()
-        c.drawCircle(x, y - 23f, 12f, paint); c.drawCircle(x - 7f, y - 18f, 8f, paint)
-        paint.color = 0x334d8a45; c.drawCircle(x - 4f, y - 28f, 5f, paint)
-    }
-    private fun drawStone(c: Canvas, x: Float, y: Float) {
-        paint.color = 0xff77786c.toInt()
-        val p = Path().apply { moveTo(x - 9f,y); lineTo(x - 5f,y - 9f); lineTo(x + 4f,y - 11f); lineTo(x + 11f,y - 2f); lineTo(x + 7f,y + 2f); close() }
-        c.drawPath(p, paint)
-    }
-    private fun drawBush(c: Canvas, x: Float, y: Float) {
-        paint.color = 0xff426b37.toInt(); c.drawCircle(x, y, 7f, paint); c.drawCircle(x + 6f, y - 2f, 5f, paint)
-        paint.color = 0xffa54b3b.toInt(); c.drawCircle(x + 2f, y - 2f, 2f, paint)
+    private fun diamond(cx:Float,cy:Float,ww:Float,hh:Float)=Path().apply {
+        moveTo(cx,cy-hh); lineTo(cx+ww,cy); lineTo(cx,cy+hh); lineTo(cx-ww,cy); close()
     }
 
-    private fun drawSettlement(c: Canvas) {
-        val (cx, cy) = iso(7, 4)
-        // central meeting ground
-        paint.color = 0xffb79a62.toInt(); c.drawOval(cx - 83f, cy - 17f, cx + 83f, cy + 19f, paint)
-        drawHut(c, cx - 48f, cy - 28f, 1.0f)
-        drawHut(c, cx + 35f, cy - 5f, 0.82f)
-        drawGranary(c, cx + 3f, cy - 47f)
-        drawCampfire(c, cx - 4f, cy + 15f)
-        // palisade sections
-        paint.color = 0xff795331.toInt()
-        for (i in 0..8) {
-            val x = cx - 94f + i * 23f
-            c.drawRect(x, cy + 17f, x + 5f, cy + 36f, paint)
+    private fun drawDecor(c:Canvas,world:WorldModel) {
+        for(y in 0 until world.height) for(x in 0 until world.width) {
+            val tile=world.tiles[y][x]
+            val cx=sx(x.toFloat(),y.toFloat())
+            val cy=sy(x.toFloat(),y.toFloat())
+            when(tile.node) {
+                NodeKind.TREE -> drawTree(c,cx,cy,(x*3+y)%2==0,if(tile.amount<30)0.55f else 1f)
+                NodeKind.ROCK -> drawRock(c,cx+2f,cy-1f)
+                NodeKind.BERRY -> drawBerry(c,cx,cy)
+                NodeKind.DEER -> drawDeer(c,cx,cy)
+                null -> if(tile.ground!=Ground.WATER && (x*17+y*29)%19==0) {
+                    p.color=0xffb5bd75.toInt(); c.drawOval(cx-1f,cy-4f,cx+2f,cy-1f,p)
+                }
+            }
         }
-        paint.color = 0xffb48a4d.toInt(); c.drawRect(cx - 97f, cy + 15f, cx + 98f, cy + 19f, paint)
     }
 
-    private fun drawHut(c: Canvas, x: Float, y: Float, s: Float) {
-        c.save(); c.translate(x, y); c.scale(s, s)
-        paint.color = 0xff8b6239.toInt()
-        c.drawRect(-22f, -22f, 22f, 3f, paint)
-        paint.color = 0xffc19a5d.toInt()
-        val roof = Path().apply { moveTo(-27f,-20f); lineTo(0f,-43f); lineTo(27f,-20f); close() }; c.drawPath(roof, paint)
-        paint.color = 0xff543a28.toInt(); c.drawRect(-5f, -15f, 5f, 3f, paint)
-        paint.color = 0xffe0bd7b.toInt(); c.drawLine(-19f,-18f,0f,-36f,paint)
+    private fun drawTree(c:Canvas,x:Float,y:Float,pine:Boolean,health:Float) {
+        p.color=0x5533281d; c.drawOval(x-9f,y-1f,x+10f,y+6f,p)
+        p.color=0xff59432c.toInt(); c.drawRoundRect(x-3f,y-19f,x+3f,y+3f,2f,2f,p)
+        val r=14f*health
+        p.color=if(pine)0xff315c38.toInt() else 0xff47763c.toInt()
+        c.drawCircle(x,y-23f,r,p); c.drawCircle(x-8f,y-18f,r*.68f,p); c.drawCircle(x+8f,y-17f,r*.7f,p)
+        p.color=0x447fa65a; c.drawCircle(x-4f,y-28f,r*.42f,p)
+        if(!pine) { p.color=0xff648c46.toInt(); c.drawCircle(x+4f,y-26f,r*.42f,p) }
+    }
+    private fun drawRock(c:Canvas,x:Float,y:Float) {
+        p.color=0x55332922; c.drawOval(x-11f,y-1f,x+11f,y+5f,p)
+        val path=Path().apply{moveTo(x-12f,y);lineTo(x-8f,y-10f);lineTo(x-1f,y-15f);lineTo(x+8f,y-12f);lineTo(x+13f,y-2f);lineTo(x+6f,y+2f);close()}
+        p.color=0xff777c72.toInt();c.drawPath(path,p)
+        p.color=0xffaeb1a1.toInt();c.drawLine(x-6f,y-9f,x-1f,y-13f,p);c.drawLine(x-1f,y-13f,x+3f,y-12f,p)
+    }
+    private fun drawBerry(c:Canvas,x:Float,y:Float) {
+        p.color=0xff416a37.toInt();c.drawCircle(x-5f,y-5f,7f,p);c.drawCircle(x+3f,y-7f,7f,p);c.drawCircle(x+8f,y-2f,5f,p)
+        p.color=0xffa8433b.toInt();c.drawCircle(x-5f,y-7f,2f,p);c.drawCircle(x+4f,y-9f,2f,p);c.drawCircle(x+8f,y-3f,2f,p)
+    }
+    private fun drawDeer(c:Canvas,x:Float,y:Float) {
+        p.color=0x55332922;c.drawOval(x-11f,y+1f,x+13f,y+5f,p)
+        p.color=0xff9a7047.toInt();c.drawOval(x-9f,y-10f,x+9f,y-2f,p);c.drawCircle(x+8f,y-10f,4f,p)
+        p.color=0xff6d4b30.toInt();c.drawLine(x-5f,y-3f,x-7f,y+5f,p);c.drawLine(x+5f,y-3f,x+7f,y+5f,p)
+        p.color=0xffe3d3ad.toInt();c.drawLine(x+8f,y-14f,x+11f,y-20f,p);c.drawLine(x+8f,y-14f,x+5f,y-20f,p)
+    }
+
+    private fun drawBuildings(c:Canvas,world:WorldModel) {
+        for(b in world.visibleBuildings().sortedBy{it.x+it.y}) {
+            val x=sx(b.x,b.y); val y=sy(b.x,b.y)
+            when(b.type) {
+                Structure.GREAT_HALL -> drawGreatHall(c,x,y)
+                Structure.HUT -> drawHut(c,x,y,1f)
+                Structure.GRANARY -> drawGranary(c,x,y)
+                Structure.WOODCAMP -> drawWoodcamp(c,x,y)
+                Structure.QUARRY -> drawQuarry(c,x,y)
+                Structure.HUNTER_CAMP -> drawHunterCamp(c,x,y)
+                Structure.WATCHTOWER -> drawTower(c,x,y)
+                Structure.BONFIRE -> drawFire(c,x,y,world.firePulse)
+                Structure.PALISADE -> drawPalisade(c,x,y)
+            }
+            if(b.health<95f) {
+                p.color=0xff401f1b.toInt();c.drawRect(x-13f,y-42f,x+13f,y-39f,p)
+                p.color=0xffbd4b36.toInt();c.drawRect(x-13f,y-42f,x-13f+26f*(b.health/100f),y-39f,p)
+            }
+        }
+    }
+    private fun drawHut(c:Canvas,x:Float,y:Float,s:Float) {
+        c.save();c.translate(x,y);c.scale(s,s)
+        p.color=0x5533261b;c.drawOval(-27f,-2f,27f,8f,p)
+        p.color=0xff8a6139.toInt();c.drawRect(-20f,-23f,20f,3f,p)
+        val roof=Path().apply{moveTo(-27f,-20f);lineTo(0f,-46f);lineTo(27f,-20f);close()}
+        p.color=0xffa87948.toInt();c.drawPath(roof,p)
+        p.color=0xffd0a96a.toInt();c.drawLine(-20f,-20f,0f,-40f,p);c.drawLine(0f,-40f,20f,-20f,p)
+        p.color=0xff523a29.toInt();c.drawRect(-5f,-15f,5f,3f,p)
+        p.color=0xffc4a06a.toInt();c.drawLine(-19f,-3f,19f,-3f,p)
         c.restore()
     }
-    private fun drawGranary(c: Canvas, x: Float, y: Float) {
-        paint.color = 0xffa77b45.toInt(); c.drawRect(x - 13f, y - 19f, x + 13f, y + 2f, paint)
-        paint.color = 0xffd3a85d.toInt()
-        val roof = Path().apply { moveTo(x-17f,y-18f); lineTo(x,y-30f); lineTo(x+17f,y-18f); close() }; c.drawPath(roof,paint)
-        paint.color = 0xff59412c.toInt(); c.drawRect(x-3f,y-10f,x+3f,y+2f,paint)
+    private fun drawGreatHall(c:Canvas,x:Float,y:Float) {
+        p.color=0x6633281e;c.drawOval(x-36f,y-3f,x+36f,y+9f,p)
+        p.color=0xff775035.toInt();c.drawRect(x-28f,y-31f,x+28f,y+4f,p)
+        val roof=Path().apply{moveTo(x-35f,y-29f);lineTo(x,y-61f);lineTo(x+35f,y-29f);close()}
+        p.color=0xffb68a4f.toInt();c.drawPath(roof,p)
+        p.color=0xffd2ad70.toInt();c.drawLine(x-27f,y-29f,x,y-55f,p);c.drawLine(x,y-55f,x+27f,y-29f,p)
+        p.color=0xff493426.toInt();c.drawRect(x-7f,y-21f,x+7f,y+4f,p)
+        p.color=0xffd9bc85.toInt();c.drawRect(x-31f,y+1f,x+31f,y+4f,p)
+        p.color=0xffe7d5a8.toInt();c.drawCircle(x,y-39f,3f,p)
     }
-    private fun drawCampfire(c: Canvas, x: Float, y: Float) {
-        paint.color = 0xff563d2a.toInt(); c.drawLine(x-9f,y+4f,x+9f,y-1f,paint); c.drawLine(x-8f,y-1f,x+8f,y+4f,paint)
-        paint.color = 0xffe4a33d.toInt(); c.drawOval(x-5f,y-13f,x+5f,y+2f,paint)
-        paint.color = 0xffffd36a.toInt(); c.drawOval(x-2f,y-9f,x+2f,y,paint)
+    private fun drawGranary(c:Canvas,x:Float,y:Float) {
+        p.color=0x5533261b;c.drawOval(x-20f,y,x+20f,y+6f,p)
+        p.color=0xffa47b48.toInt();c.drawRect(x-15f,y-24f,x+15f,y+3f,p)
+        val roof=Path().apply{moveTo(x-20f,y-22f);lineTo(x,y-39f);lineTo(x+20f,y-22f);close()}
+        p.color=0xffd1aa65.toInt();c.drawPath(roof,p)
+        p.color=0xff5a3d28.toInt();c.drawRect(x-4f,y-13f,x+4f,y+3f,p)
+        p.color=0xffe1c18a.toInt();c.drawLine(x-12f,y-4f,x+12f,y-4f,p)
+    }
+    private fun drawWoodcamp(c:Canvas,x:Float,y:Float) {
+        p.color=0x5533261b;c.drawOval(x-21f,y,x+22f,y+6f,p)
+        p.color=0xff765132.toInt();c.drawRect(x-16f,y-14f,x+16f,y+2f,p)
+        p.color=0xffa17a49.toInt();c.drawRect(x-19f,y-18f,x+19f,y-13f,p)
+        p.color=0xff604329.toInt();c.drawLine(x-13f,y-19f,x+12f,y-19f,p);c.drawLine(x-10f,y-23f,x+14f,y-23f,p)
+        p.color=0xffb18b59.toInt();c.drawRect(x-12f,y-12f,x+12f,y-9f,p)
+    }
+    private fun drawQuarry(c:Canvas,x:Float,y:Float) {
+        drawRock(c,x-6f,y-2f);drawRock(c,x+9f,y-5f)
+        p.color=0xff715338.toInt();c.drawRect(x-15f,y-10f,x+16f,y-7f,p)
+        p.color=0xffc2a06b.toInt();c.drawLine(x-10f,y-13f,x+12f,y-13f,p)
+    }
+    private fun drawHunterCamp(c:Canvas,x:Float,y:Float) {
+        p.color=0x5533261b;c.drawOval(x-20f,y,x+20f,y+6f,p)
+        p.color=0xff67462e.toInt();c.drawLine(x-14f,y-3f,x,y-30f,p);c.drawLine(x+14f,y-3f,x,y-30f,p)
+        p.color=0xffb18b58.toInt();c.drawLine(x-14f,y-3f,x+14f,y-3f,p)
+        p.color=0xff8d6b45.toInt();c.drawLine(x-10f,y-8f,x+10f,y-8f,p)
+    }
+    private fun drawTower(c:Canvas,x:Float,y:Float) {
+        p.color=0x5533261b;c.drawOval(x-17f,y,x+17f,y+6f,p)
+        p.color=0xff805b39.toInt();c.drawRect(x-12f,y-39f,x+12f,y+2f,p)
+        p.color=0xffbd9257.toInt();c.drawRect(x-17f,y-43f,x+17f,y-36f,p)
+        p.color=0xff573b28.toInt();c.drawRect(x-3f,y-28f,x+3f,y-18f,p)
+        p.color=0xffd6b77d.toInt();c.drawLine(x-10f,y-35f,x+10f,y-35f,p)
+    }
+    private fun drawFire(c:Canvas,x:Float,y:Float,t:Float) {
+        p.color=0x6633281d;c.drawOval(x-17f,y,x+17f,y+7f,p)
+        p.color=0xff5c402b.toInt();c.drawLine(x-13f,y+2f,x+13f,y-2f,p);c.drawLine(x-11f,y-2f,x+12f,y+3f,p)
+        val f=sin(t*5f)*2f
+        p.color=0xffe18a32.toInt();c.drawOval(x-7f,y-19f+f,x+7f,y+3f,p)
+        p.color=0xffffd56d.toInt();c.drawOval(x-3f,y-13f+f,x+3f,y+1f,p)
+        p.color=0x66ffb84c;c.drawCircle(x,y-10f,14f+sin(t*3f)*2f,p)
+    }
+    private fun drawPalisade(c:Canvas,x:Float,y:Float) {
+        p.color=0xff6d4b2f.toInt()
+        for(i in -2..2) {
+            val xx=x+i*7f
+            c.drawRect(xx-2f,y-23f,xx+2f,y+3f,p)
+            val tip=Path().apply{moveTo(xx-2f,y-22f);lineTo(xx,y-29f);lineTo(xx+2f,y-22f);close()}
+            c.drawPath(tip,p)
+        }
+        p.color=0xffb08a56.toInt();c.drawRect(x-18f,y-13f,x+18f,y-9f,p)
     }
 
-    private fun drawPeople(c: Canvas) {
-        val (cx, cy) = iso(7, 4)
-        for (i in 0 until population) {
-            val a = i * 2.399f
-            val x = cx + cos(a) * (48f + (i % 3) * 8f)
-            val y = cy + sin(a) * (17f + (i % 3) * 3f) - 5f
-            drawTribesman(c, x, y, phase, i)
+    private fun drawUnits(c:Canvas,world:WorldModel) {
+        for(unit in world.people.sortedBy{it.x+it.y}) drawPerson(c,sx(unit.x,unit.y),sy(unit.x,unit.y),unit.walkingPhase,false,unit.role,unit.health)
+        for(unit in world.enemies.sortedBy{it.x+it.y}) drawPerson(c,sx(unit.x,unit.y),sy(unit.x,unit.y),unit.walkingPhase,true,unit.role,unit.health)
+    }
+    private fun drawPerson(c:Canvas,x:Float,y:Float,phase:Float,enemy:Boolean,role:Role,hp:Float) {
+        val bob=sin(phase)*1.4f
+        p.color=0x5533261b;c.drawOval(x-7f,y+4f,x+8f,y+8f,p)
+        p.color=if(enemy)0xffa34235.toInt() else if(role==Role.GUARD)0xff9b7b48.toInt() else 0xff765038.toInt()
+        c.drawRect(x-4f,y-3f+bob,x+4f,y+5f+bob,p)
+        p.color=if(enemy)0xffc17c59.toInt() else 0xffc58d5e.toInt()
+        c.drawCircle(x,y-9f+bob,4.2f,p)
+        p.color=0xff3d2b22.toInt();c.drawArc(x-4.5f,y-14f+bob,x+4.5f,y-5f+bob,180f,180f,true,p)
+        p.color=0xff4b3526.toInt()
+        c.drawLine(x-2f,y+3f+bob,x-3f,y+9f+bob,p);c.drawLine(x+2f,y+3f+bob,x+3f,y+9f+bob,p)
+        if(role==Role.GUARD || enemy) {
+            p.color=0xff8a8a7a.toInt();c.drawLine(x+4f,y-2f+bob,x+10f,y-16f+bob,p)
+            p.color=0xff68472c.toInt();c.drawLine(x+4f,y-1f+bob,x+8f,y+4f+bob,p)
+        } else {
+            p.color=0xffa88b62.toInt();c.drawLine(x+3f,y-2f+bob,x+8f,y-9f+bob,p)
+        }
+        if(hp<95f) {
+            p.color=0xff3e2521.toInt();c.drawRect(x-6f,y-20f,x+6f,y-18f,p)
+            p.color=0xffb64a37.toInt();c.drawRect(x-6f,y-20f,x-6f+12f*(hp/100f),y-18f,p)
         }
     }
-    private fun drawTribesman(c: Canvas, x: Float, y: Float, t: Float, index: Int) {
-        val bob = sin(t * 4f + index) * 1.6f
-        paint.color = 0x55332211; c.drawOval(x-7f,y+8f,x+7f,y+12f,paint)
-        paint.color = if (index % 4 == 0) 0xffa95e39.toInt() else 0xffc58c5c.toInt()
-        c.drawOval(x-5f,y-13f+bob,x+5f,y-2f+bob,paint)
-        paint.color = 0xff3f3027.toInt(); c.drawOval(x-5f,y-17f+bob,x+5f,y-7f+bob,paint)
-        paint.color = 0xff765038.toInt(); c.drawRect(x-5f,y-3f+bob,x+5f,y+7f+bob,paint)
-        paint.color = 0xffd7c29a.toInt(); c.drawRect(x-5f,y+1f+bob,x+5f,y+4f+bob,paint)
-        paint.color = 0xff5b3b28.toInt(); c.drawLine(x+3f,y-2f+bob,x+10f,y-13f+bob,paint)
+
+    private fun drawLighting(c:Canvas,world:WorldModel) {
+        val t=(world.elapsed%48f)/48f
+        val darkness=if(t<0.25f || t>0.78f)0.26f else 0f
+        if(darkness>0f) {
+            p.color=(darkness*255).toInt().shl(24) or 0xff101c35.toInt()
+            c.drawRect(0f,54f,960f,380f,p)
+        }
+        if(world.raidWarning>0f) {
+            val pulse=(sin(world.elapsed*8f)*0.5f+0.5f)
+            p.color=(0x30+pulse*35).toInt().shl(24) or 0x00d94b32
+            c.drawRect(0f,55f,960f,378f,p)
+        }
     }
 
-    private fun drawAtmosphere(c: Canvas) {
-        val glow = (sin((System.nanoTime() - startedAt) / 8.0e9) * 0.5 + 0.5).toFloat()
-        paint.color = (0x18000000 + (glow * 0x08000000).toInt())
-        c.drawRect(0f, 52f, 960f, 400f, paint)
+    private fun drawInterface(c:Canvas,world:WorldModel) {
+        p.style=Paint.Style.FILL
+        p.color=0xe51b2921.toInt();c.drawRoundRect(12f,8f,948f,51f,8f,8f,p)
+        p.color=0xffd7c18c.toInt();p.typeface=Typeface.create("sans-serif-condensed",Typeface.BOLD);p.textSize=16f
+        c.drawText("ПЛЕМЯ ДОЛИНЫ",25f,25f,p)
+        p.textSize=10f;p.color=0xffa9b48c.toInt();c.drawText("ПОСЕЛЕНИЕ",26f,39f,p)
+        p.textSize=14f;p.color=0xffe7d6ac.toInt()
+        c.drawText("ДЕНЬ ${world.day}",180f,34f,p)
+        drawResource(c,280f,30f,"ЕДА",world.stock.food,0xffd7b35e.toInt())
+        drawResource(c,390f,30f,"ДЕРЕВО",world.stock.wood,0xffad7746.toInt())
+        drawResource(c,525f,30f,"КАМЕНЬ",world.stock.stone,0xffaab0a5.toInt())
+        drawResource(c,660f,30f,"ШКУРЫ",world.stock.hides,0xffb98c65.toInt())
+        c.drawText("ЛЮДИ ${world.population}",815f,34f,p)
+        p.color=0xe51b2921.toInt();c.drawRoundRect(12f,382f,948f,423f,8f,8f,p)
+        p.color=0xffe7d6ac.toInt();p.textSize=13f;c.drawText(world.missionText,27f,407f,p)
+        p.color=0xffa9c38a.toInt();p.textSize=11f
+        c.drawText("Жители: ${world.people.size}   Защитники: ${world.people.count{it.role==Role.GUARD}}   Набеги: ${world.raidCount}",560f,407f,p)
+        if(world.raidWarning>0f) {
+            p.color=0xffffd18a.toInt();p.textSize=20f;p.typeface=Typeface.DEFAULT_BOLD
+            c.drawText("ВРАЖЕСКИЙ НАБЕГ!",370f,80f,p)
+        }
+        p.color=0x99202d25.toInt();c.drawRoundRect(780f,55f,944f,78f,5f,5f,p)
+        p.color=0xffd5c49c.toInt();p.textSize=10f;p.typeface=Typeface.DEFAULT
+        c.drawText("АВТОНОМНАЯ СИМУЛЯЦИЯ",790f,70f,p)
     }
-
-    private fun drawHud(c: Canvas) {
-        paint.color = 0xdd18251d.toInt(); c.drawRoundRect(14f, 10f, 946f, 54f, 9f, 9f, paint)
-        paint.color = 0xffd9c28c.toInt(); paint.textSize = 16f; paint.typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
-        c.drawText("ПЛЕМЯ ДОЛИНЫ", 30f, 37f, paint)
-        paint.textSize = 14f; paint.typeface = Typeface.DEFAULT_BOLD
-        c.drawText("ДЕНЬ $day", 200f, 37f, paint)
-        c.drawText("Еда  $food", 320f, 37f, paint)
-        c.drawText("Дерево  $wood", 435f, 37f, paint)
-        c.drawText("Камень  $stone", 580f, 37f, paint)
-        c.drawText("Люди  $population/20", 735f, 37f, paint)
-        paint.color = 0xcc18251d.toInt(); c.drawRoundRect(14f, 382f, 946f, 420f, 8f, 8f, paint)
-        paint.color = 0xffe5d2a6.toInt(); paint.textSize = 13f
-        c.drawText("ПОСЕЛЕНИЕ", 30f, 406f, paint)
-        paint.color = 0xffa9c38a.toInt(); c.drawText("Хижины  2     Амбар  1     Костёр  1     Частокол", 155f, 406f, paint)
-        paint.color = 0xffd6b67d.toInt(); c.drawText("Автономная симуляция • управление будет добавлено позже", 575f, 406f, paint)
+    private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
+        p.color=color;c.drawCircle(x,y-4f,5f,p)
+        p.color=0xffe7d6ac.toInt();p.textSize=12f;p.typeface=Typeface.DEFAULT_BOLD
+        c.drawText("$label  $value",x+10f,y,p)
     }
 }
