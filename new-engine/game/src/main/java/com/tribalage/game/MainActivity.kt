@@ -93,7 +93,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
                 4 -> model.construct(Structure.HUNTER_CAMP)
                 5 -> model.construct(Structure.WATCHTOWER)
                 6 -> model.construct(Structure.BONFIRE)
-                7 -> model.trainGuard()
+                7 -> if(longPress) model.trainArcher() else model.trainGuard()
                 8 -> model.construct(Structure.PALISADE)
                 else -> return true
             }
@@ -385,16 +385,21 @@ private class WorldRenderer {
     private fun drawPerson(c:Canvas,x:Float,y:Float,phase:Float,enemy:Boolean,role:Role,hp:Float) {
         val bob=sin(phase)*1.4f
         p.color=0x5533261b;c.drawOval(x-7f,y+4f,x+8f,y+8f,p)
-        p.color=if(enemy)0xffa34235.toInt() else if(role==Role.GUARD)0xff9b7b48.toInt() else 0xff765038.toInt()
+        p.color=if(enemy)0xffa34235.toInt() else if(role==Role.GUARD)0xff9b7b48.toInt() else if(role==Role.ARCHER)0xff526f83.toInt() else 0xff765038.toInt()
         c.drawRect(x-4f,y-3f+bob,x+4f,y+5f+bob,p)
         p.color=if(enemy)0xffc17c59.toInt() else 0xffc58d5e.toInt()
         c.drawCircle(x,y-9f+bob,4.2f,p)
         p.color=0xff3d2b22.toInt();c.drawArc(x-4.5f,y-14f+bob,x+4.5f,y-5f+bob,180f,180f,true,p)
         p.color=0xff4b3526.toInt()
         c.drawLine(x-2f,y+3f+bob,x-3f,y+9f+bob,p);c.drawLine(x+2f,y+3f+bob,x+3f,y+9f+bob,p)
-        if(role==Role.GUARD || enemy) {
-            p.color=0xff8a8a7a.toInt();c.drawLine(x+4f,y-2f+bob,x+10f,y-16f+bob,p)
-            p.color=0xff68472c.toInt();c.drawLine(x+4f,y-1f+bob,x+8f,y+4f+bob,p)
+        if(role==Role.GUARD || role==Role.ARCHER || enemy) {
+            if(role==Role.ARCHER && !enemy) {
+                p.color=0xff9b7547.toInt();c.drawArc(x+1f,y-13f+bob,x+13f,y-1f+bob,260f,200f,false,p)
+                p.color=0xffd6c49b.toInt();c.drawLine(x+7f,y-12f+bob,x+7f,y-1f+bob,p)
+            } else {
+                p.color=0xff8a8a7a.toInt();c.drawLine(x+4f,y-2f+bob,x+10f,y-16f+bob,p)
+                p.color=0xff68472c.toInt();c.drawLine(x+4f,y-1f+bob,x+8f,y+4f+bob,p)
+            }
         } else {
             p.color=0xffa88b62.toInt();c.drawLine(x+3f,y-2f+bob,x+8f,y-9f+bob,p)
         }
