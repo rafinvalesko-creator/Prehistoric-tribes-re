@@ -54,7 +54,7 @@ jobs:
           mkdir -p jlmod/app/src/midlet/java jlmod/app/src/midlet/resources/MIDLET-META-INF
           curl -fL --retry 3 https://github.com/mstrobel/procyon/releases/download/v0.6.0/procyon-decompiler-0.6.0.jar -o /tmp/procyon.jar
           java -jar /tmp/procyon.jar -o decompiled-procyon original/prehistoric-tribes-0.1.38.jar
-          find decompiled-procyon -type f -name '*.java' -exec cp {} jlmod/app/src/midlet/java/ \\;
+          while IFS= read -r -d '' source_file; do cp "$source_file" jlmod/app/src/midlet/java/; done < <(find decompiled-procyon -type f -name '*.java' -print0)
           test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
           unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
           chmod -R u+rwX /tmp/prehistoric-jar
