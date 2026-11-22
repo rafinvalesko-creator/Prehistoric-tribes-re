@@ -11,6 +11,7 @@ public final class JarTouchPatcher {
     if (args.length != 2) throw new IllegalArgumentException("input.jar output.jar");
     Path input = Paths.get(args[0]), output = Paths.get(args[1]);
     boolean[] patched = {false};
+    int[] hiddenCursorDraws = {0};
     try (JarFile jar = new JarFile(input.toFile());
          JarOutputStream out = new JarOutputStream(Files.newOutputStream(output))) {
       java.util.Enumeration<JarEntry> entries = jar.entries();
@@ -23,7 +24,7 @@ public final class JarTouchPatcher {
         try (InputStream in = jar.getInputStream(entry)) {
           if (name.equals(TARGET + ".class")) {
             byte[] original = readAll(in);
-            out.write(patchGameClass(original));
+            out.write(patchGameClass(original, hiddenCursorDraws));
             patched[0] = true;
           } else {
             in.transferTo(out);
@@ -36,7 +37,10 @@ public final class JarTouchPatcher {
       out.write(makeReleaseClass());
       out.closeEntry();
     }
-    System.out.println("Touch input patch applied: direct map taps, hand cursor hidden, swipe=direction");
+    if (hiddenCursorDraws[0] < 2) {
+      throw new IllegalStateException("Expected both cursor draw branches to be removed, removed " + hiddenCursorDraws[0]);
+    }
+    System.out.println("Touch input patch applied: removed " + hiddenCursorDraws[0] + " battlefield cursor draw calls");
   }
 
   static byte[] readAll(InputStream in) throws IOException {
@@ -45,7 +49,7 @@ public final class JarTouchPatcher {
     return b.toByteArray();
   }
 
-  static byte[] patchGameClass(byte[] source) {
+  static byte[] patchGameClass(byte[] source, int[] hiddenCursorDraws) {
     ClassReader reader = new ClassReader(source);
     ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS) {
       @Override protected String getCommonSuperClass(String a, String b) { return "java/lang/Object"; }
@@ -75,6 +79,7 @@ public final class JarTouchPatcher {
             @Override public void visitMethodInsn(int opcode, String owner, String method, String descriptor, boolean isInterface) {
               // Both alternate draw branches render the same hand sprite; hide every call.
               if (owner.equals(TARGET) && method.equals("d") && descriptor.equals("(IIII)V")) {
+                hiddenCursorDraws[0]++;
                 for (int i = 0; i < 5; i++) super.visitInsn(Opcodes.POP);
                 return;
               }
