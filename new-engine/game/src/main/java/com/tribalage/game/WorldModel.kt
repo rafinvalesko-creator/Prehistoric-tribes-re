@@ -348,7 +348,7 @@ class WorldModel {
     fun visibleBuildings()=buildings.toList()
 
     fun construct(type:Structure):Boolean {
-        if(type==Structure.GREAT_HALL || type==Structure.PALISADE) return false
+        if(type==Structure.GREAT_HALL) return false
         val cost=when(type) {
             Structure.HUT -> intArrayOf(35,24,8)
             Structure.GRANARY -> intArrayOf(25,30,12)
@@ -357,6 +357,7 @@ class WorldModel {
             Structure.HUNTER_CAMP -> intArrayOf(16,22,5)
             Structure.WATCHTOWER -> intArrayOf(8,32,20)
             Structure.BONFIRE -> intArrayOf(12,18,4)
+            Structure.PALISADE -> intArrayOf(5,15,5)
             else -> return false
         }
         if(!stock.canAfford(cost[0],cost[1],cost[2])) {
