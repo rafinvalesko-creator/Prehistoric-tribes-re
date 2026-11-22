@@ -13,6 +13,7 @@ on:
       - '.github/workflows/trigger-build-7.txt'
       - '.github/workflows/trigger-build-8.txt'
       - '.github/workflows/trigger-build-9.txt'
+      - '.github/workflows/trigger-build-10.txt'
 
 permissions:
   contents: read
@@ -75,9 +76,16 @@ jobs:
           s = p.read_text()
           s = s.replace('this.f245b = new int[]{new int[]{', 'this.f245b = new int[][]{new int[]{')
           s = s.replace('Object[] objArr = false;', 'boolean objArr = false;')
+          s = s.replace('                } else {\n                    return;\n                }\n                break;\n            case 1055:', '                } else {\n                    return;\n                }\n            case 1055:')
+          s = s.replace('                    b6 = (byte) (b7 + 1);\n                }\n            }\n            b4 =', '                    b6 = (byte) (b7 + 1);\n                } else {\n                    break;\n                }\n            }\n            b4 =')
+          s = s.replace('                    b10 = (byte) (b11 + 1);\n                }\n            }\n            b8 =', '                    b10 = (byte) (b11 + 1);\n                } else {\n                    break;\n                }\n            }\n            b8 =')
+          s = s.replace('                    b16 = (byte) (b17 + 1);\n                }\n            }\n            b12 =', '                    b16 = (byte) (b17 + 1);\n                } else {\n                    break;\n                }\n            }\n            b12 =')
+          s = s.replace('        if (recordStoreOpenRecordStore != null) {\n            recordStoreOpenRecordStore.closeRecordStore();\n        }', '        if (recordStoreOpenRecordStore != null) {\n            try { recordStoreOpenRecordStore.closeRecordStore(); } catch (Exception ignored) { }\n        }')
+          s = s.replace('            this.f150a = new a("audio/midi");', '            try { this.f150a = new a("audio/midi"); } catch (Exception ignored) { this.f150a = null; }')
           p.write_text(s)
           p = root / 'd.java'
           s = p.read_text().replace('g.', 'defpackage.g.')
+          s = s.replace('Strindefpackage.g.valueOf', 'String.valueOf')
           p.write_text(s)
           p = root / 'b.java'
           s = p.read_text()
