@@ -96,13 +96,19 @@ jobs:
           p.write_text(s)
           p = root / 'c.java'
           s = p.read_text()
-          old = """                            } else {
+          old = """                        if (this.f49v <= 30) {
+                            if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {
+                                this.f49v++;
+                            } else {
                                 this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
                             }
                         }
                     }
                     if (this.f80O < 120 - this.f7b[this.f8a[298] + this.f31g]) {"""
-          new = """                            } else {
+          new = """                        if (this.f49v <= 30) {
+                            if (this.a.f272G || this.f4a[8505 + this.f49v] <= 0 || this.f4a[8749 + this.f49v] != this.f7b[this.f8a[297] + this.f31g]) {
+                                this.f49v++;
+                            } else {
                                 this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
                                 break;
                             }
