@@ -12,6 +12,7 @@ on:
       - '.github/workflows/trigger-build-6.txt'
       - '.github/workflows/trigger-build-7.txt'
       - '.github/workflows/trigger-build-8.txt'
+      - '.github/workflows/trigger-build-9.txt'
 
 permissions:
   contents: read
@@ -60,6 +61,30 @@ jobs:
           unzip -q /tmp/jadx.zip -d /tmp/jadx
           /tmp/jadx/bin/jadx --no-res -d decompiled-jadx original/prehistoric-tribes-0.1.38.jar
           cp -a decompiled-jadx/sources/. jlmod/app/src/midlet/java/
+          # Repair known JADX type-inference and name-shadowing errors using the original bytecode structure.
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('jlmod/app/src/midlet/java/defpackage')
+          p = root / 'f.java'
+          s = p.read_text()
+          s = s.replace('this.a.f243b = new short[11];', 'this.a.f243b = new short[11][];')
+          s = s.replace('this.a.f244j = new byte[25];', 'this.a.f244j = new byte[25][];')
+          s = s.replace('this.a.f242a = new Image[3];', 'this.a.f242a = new Image[3][];')
+          p.write_text(s)
+          p = root / 'g.java'
+          s = p.read_text()
+          s = s.replace('this.f245b = new int[]{new int[]{', 'this.f245b = new int[][]{new int[]{')
+          s = s.replace('Object[] objArr = false;', 'boolean objArr = false;')
+          p.write_text(s)
+          p = root / 'd.java'
+          s = p.read_text().replace('g.', 'defpackage.g.')
+          p.write_text(s)
+          p = root / 'b.java'
+          s = p.read_text()
+          s = s.replace('this.f0a = Connector.open(this.c);', 'this.f0a = (MessageConnection) Connector.open(this.c);')
+          s = s.replace('TextMessage textMessageNewMessage = this.f0a.newMessage("text");', 'TextMessage textMessageNewMessage = (TextMessage) this.f0a.newMessage("text");')
+          p.write_text(s)
+          PY
           test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
           unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
           chmod -R u+rwX /tmp/prehistoric-jar
