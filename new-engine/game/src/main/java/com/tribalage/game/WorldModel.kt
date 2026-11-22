@@ -197,9 +197,15 @@ class WorldModel {
         for(p in people) {
             p.walkingPhase+=dt*7f
             if(p.role==Role.GUARD) {
-                val homeX=12.4f+(p.id%3)*0.45f
-                val homeY=9.3f
-                if(distance(p.x,p.y,homeX,homeY)>0.25f) move(p,homeX,homeY,dt)
+                val target=enemies.filter { it.health>0f }
+                    .minByOrNull { distance(p.x,p.y,it.x,it.y) }
+                if(target!=null && distance(p.x,p.y,target.x,target.y)<7.0f) {
+                    if(distance(p.x,p.y,target.x,target.y)>1.05f) move(p,target.x,target.y,dt,0.92f)
+                } else {
+                    val homeX=12.4f+(p.id%3)*0.45f
+                    val homeY=9.3f
+                    if(distance(p.x,p.y,homeX,homeY)>0.25f) move(p,homeX,homeY,dt)
+                }
                 continue
             }
             if(p.role==Role.BUILDER) {
@@ -312,14 +318,18 @@ class WorldModel {
                         e.health-=26f
                         lastBattleText="Стража сражается с налётчиками"
                     } else {
-                        val target=buildings.filter{it.type!=Structure.PALISADE}.minByOrNull{distance(it.x,it.y,e.x,e.y)}
+                        val wall=buildings.filter{it.type==Structure.PALISADE}
+                            .filter{distance(it.x,it.y,e.x,e.y)<2.8f}
+                            .minByOrNull{distance(it.x,it.y,e.x,e.y)}
+                        val target=wall ?: buildings.filter{it.type!=Structure.PALISADE}
+                            .minByOrNull{distance(it.x,it.y,e.x,e.y)}
                         if(target!=null) {
-                            target.health-=9f
-                            lastBattleText="Враги атакуют строение"
+                            target.health-=if(target.type==Structure.PALISADE) 7f else 9f
+                            lastBattleText=if(target.type==Structure.PALISADE) "Налётчики ломают частокол" else "Враги атакуют строение"
                             if(target.health<=0f) {
                                 buildings.remove(target)
                                 morale=(morale-8).coerceAtLeast(0)
-                                lastBattleText="Строение разрушено!"
+                                lastBattleText=if(target.type==Structure.PALISADE) "Участок частокола разрушен!" else "Строение разрушено!"
                             }
                         } else morale=(morale-4).coerceAtLeast(0)
                     }
