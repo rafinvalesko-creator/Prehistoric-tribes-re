@@ -8,6 +8,7 @@ on:
       - '.github/workflows/trigger-build-13.txt'
       - '.github/workflows/trigger-build-14.txt'
       - 'original/prehistoric-tribes-0.1.38.jar'
+      - 'tools/JarTouchPatcher.java'
 
 permissions:
   contents: read
@@ -53,6 +54,12 @@ jobs:
           python3 -m compileall -q tools
           mkdir -p jlmod/app/src/main/assets jlmod/app/src/main/java/ru/playsoftware/j2meloader
           cp original/prehistoric-tribes-0.1.38.jar jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
+          curl -fsSL https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar -o /tmp/asm-9.7.1.jar
+          javac -cp /tmp/asm-9.7.1.jar -d /tmp tools/JarTouchPatcher.java
+          java -cp /tmp:/tmp/asm-9.7.1.jar JarTouchPatcher \
+            jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar \
+            /tmp/prehistoric-tribes-touch.jar
+          mv /tmp/prehistoric-tribes-touch.jar jlmod/app/src/main/assets/prehistoric-tribes-0.1.38.jar
           cat > jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java <<'JAVA'
           package ru.playsoftware.j2meloader;
 
