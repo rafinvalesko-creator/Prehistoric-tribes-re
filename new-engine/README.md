@@ -15,3 +15,14 @@ This is an engine foundation and visual slice, **not yet a complete recreation**
 ## Build
 
 Run `gradle :game:assembleDebug` from this directory with JDK 17 and Android SDK 35.
+
+## Current simulation systems
+
+- Four-season cycle with increased winter food consumption.
+- Hunger lowers morale and gradually harms villagers.
+- Population growth is limited by available huts and food reserves.
+- The builder automatically repairs damaged buildings.
+- Resource gathering shifts toward food when supplies are low.
+- The HUD displays the current season and housing capacity.
+
+These systems are part of the clean-room prototype and are still being balanced.
