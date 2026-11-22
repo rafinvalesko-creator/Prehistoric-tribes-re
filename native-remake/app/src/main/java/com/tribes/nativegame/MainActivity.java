@@ -88,14 +88,16 @@ public class MainActivity extends Activity {
                 for(String a:ps){String[] v=a.split(","); if(v.length>=6){Person q=new Person(v[0],Float.parseFloat(v[1]),Float.parseFloat(v[2]),v[3].equals("1"));q.hunger=Float.parseFloat(v[4]);q.energy=Float.parseFloat(v[5]);people.add(q);}}
                 String[] bs=rows[1].split(";");
                 for(String a:bs){String[] v=a.split(",");if(v.length>=4)buildings.add(new Building(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),v[3].equals("1")));}
+                if(rows.length>=3){String[] ns=rows[2].split(";");for(String a:ns){String[] v=a.split(",");if(v.length>=4){Node n=new Node(Float.parseFloat(v[0]),Float.parseFloat(v[1]),Integer.parseInt(v[2]),Float.parseFloat(v[3]));if(v.length>=5)n.regrowTimer=Float.parseFloat(v[4]);nodes.add(n);}}}
                 if(people.isEmpty()) newGame();
             } catch(Exception e){newGame();}
         }
         void save() {
-            StringBuilder a=new StringBuilder(),b=new StringBuilder();
+            StringBuilder a=new StringBuilder(),b=new StringBuilder(),n=new StringBuilder();
             for(Person q:people){if(a.length()>0)a.append(';');a.append(q.name).append(',').append(q.x).append(',').append(q.y).append(',').append(q.male?1:0).append(',').append(q.hunger).append(',').append(q.energy);}
             for(Building q:buildings){if(b.length()>0)b.append(';');b.append(q.x).append(',').append(q.y).append(',').append(q.type).append(',').append(q.done?1:0);}
-            prefs.edit().putInt("food",food).putInt("wood",wood).putInt("stone",stone).putInt("tools",tools).putInt("day",day).putString("state",a+"|"+b).apply();
+            for(Node q:nodes){if(n.length()>0)n.append(';');n.append(q.x).append(',').append(q.y).append(',').append(q.kind).append(',').append(q.amount).append(',').append(q.regrowTimer);}
+            prefs.edit().putInt("food",food).putInt("wood",wood).putInt("stone",stone).putInt("tools",tools).putInt("day",day).putString("state",a+"|"+b+"|"+n).apply();
         }
         void togglePause(){paused=!paused;notice=paused?"Племя отдыхает.":"Продолжаем жить!";invalidate();}
         @Override protected void onDraw(Canvas c) {
