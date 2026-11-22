@@ -146,7 +146,7 @@ private class WorldRenderer {
         drawUnits(c,world)
         drawLighting(c,world)
         drawInterface(c,world)
-        drawBuildPanel(c)
+        drawBuildPanel(c,world)
         c.restore()
     }
 
@@ -398,7 +398,7 @@ private class WorldRenderer {
         p.color=0xffd5c49c.toInt();p.textSize=10f;p.typeface=Typeface.DEFAULT
         c.drawText("АВТОНОМНАЯ СИМУЛЯЦИЯ",790f,70f,p)
     }
-    private fun drawBuildPanel(c:Canvas) {
+    private fun drawBuildPanel(c:Canvas,world:WorldModel) {
         p.color=0xe51b2921.toInt()
         c.drawRoundRect(780f,84f,948f,376f,8f,8f,p)
         p.color=0xffd7c18c.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=12f
@@ -413,15 +413,28 @@ private class WorldRenderer {
             "Костёр  Е12 Д18 К4",
             "Обучить стражника  Е18 Ш2"
         )
+        val costs=arrayOf(
+            intArrayOf(35,24,8),intArrayOf(25,30,12),intArrayOf(12,28,4),
+            intArrayOf(10,20,16),intArrayOf(16,22,5),intArrayOf(8,32,20),
+            intArrayOf(12,18,4),intArrayOf(18,0,0)
+        )
+        val canTrain=world.stock.food>=18 && world.stock.hides>=2 &&
+            world.people.any{it.role==Role.GATHERER} && world.people.count{it.role==Role.GUARD}<8
         for(i in labels.indices) {
             val top=106f+i*33f
-            p.color=if(i==7)0xff594832.toInt() else 0xff354a38.toInt()
+            val affordable=if(i==7) canTrain else world.stock.canAfford(costs[i][0],costs[i][1],costs[i][2])
+            p.color=if(affordable) (if(i==7)0xff594832.toInt() else 0xff354a38.toInt()) else 0xff493632.toInt()
             c.drawRoundRect(788f,top,940f,top+28f,5f,5f,p)
-            p.color=0xffeee0bd.toInt();p.typeface=Typeface.DEFAULT;p.textSize=10f
-            c.drawText(labels[i],794f,top+18f,p)
+            p.color=if(affordable)0xffeee0bd.toInt() else 0xffc08c7c.toInt()
+            p.typeface=Typeface.DEFAULT;p.textSize=9.5f
+            c.drawText(labels[i],793f,top+18f,p)
         }
         p.color=0xffb8c49d.toInt();p.textSize=9f
         c.drawText("Е — еда · Д — дерево · К — камень · Ш — шкуры",788f,380f,p)
+        p.color=0xffd7c18c.toInt();p.textSize=9f
+        val tools=if("Орудия труда" in world.unlockedTechnologies)"✓" else "—"
+        val storage=if("Хранение запасов" in world.unlockedTechnologies)"✓" else "—"
+        c.drawText("Технологии: орудия $tools · хранилище $storage",788f,391f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
