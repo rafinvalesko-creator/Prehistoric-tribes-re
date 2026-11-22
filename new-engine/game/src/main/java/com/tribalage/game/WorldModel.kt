@@ -307,31 +307,34 @@ class WorldModel {
         val targetX=11.5f
         val targetY=8.5f
         for(e in enemies) {
-            if(distance(e.x,e.y,targetX,targetY)>0.65f) move(e,targetX,targetY,dt,1.05f)
-            else {
+            val nearestWall=buildings.filter{it.type==Structure.PALISADE && it.health>0f}
+                .minByOrNull{distance(it.x,it.y,e.x,e.y)}
+            val target=nearestWall ?: buildings.filter{it.type!=Structure.PALISADE}
+                .minByOrNull{distance(it.x,it.y,e.x,e.y)}
+            val attackX=target?.x ?: targetX
+            val attackY=target?.y ?: targetY
+            if(distance(e.x,e.y,attackX,attackY)>0.72f) {
+                move(e,attackX,attackY,dt,1.05f)
+            } else {
                 e.work+=dt
                 if(e.work>2.1f) {
                     e.work=0f
-                    val guard=people.filter{it.role==Role.GUARD}.minByOrNull{distance(it.x,it.y,e.x,e.y)}
+                    val guard=people.filter{it.role==Role.GUARD && it.health>0f}
+                        .minByOrNull{distance(it.x,it.y,e.x,e.y)}
                     if(guard!=null && distance(guard.x,guard.y,e.x,e.y)<1.6f) {
                         guard.health-=14f
                         e.health-=26f
                         lastBattleText="Стража сражается с налётчиками"
+                    } else if(target!=null) {
+                        target.health-=if(target.type==Structure.PALISADE) 7f else 9f
+                        lastBattleText=if(target.type==Structure.PALISADE) "Налётчики ломают частокол" else "Враги атакуют строение"
+                        if(target.health<=0f) {
+                            buildings.remove(target)
+                            morale=(morale-8).coerceAtLeast(0)
+                            lastBattleText=if(target.type==Structure.PALISADE) "Участок частокола разрушен!" else "Строение разрушено!"
+                        }
                     } else {
-                        val wall=buildings.filter{it.type==Structure.PALISADE}
-                            .filter{distance(it.x,it.y,e.x,e.y)<2.8f}
-                            .minByOrNull{distance(it.x,it.y,e.x,e.y)}
-                        val target=wall ?: buildings.filter{it.type!=Structure.PALISADE}
-                            .minByOrNull{distance(it.x,it.y,e.x,e.y)}
-                        if(target!=null) {
-                            target.health-=if(target.type==Structure.PALISADE) 7f else 9f
-                            lastBattleText=if(target.type==Structure.PALISADE) "Налётчики ломают частокол" else "Враги атакуют строение"
-                            if(target.health<=0f) {
-                                buildings.remove(target)
-                                morale=(morale-8).coerceAtLeast(0)
-                                lastBattleText=if(target.type==Structure.PALISADE) "Участок частокола разрушен!" else "Строение разрушено!"
-                            }
-                        } else morale=(morale-4).coerceAtLeast(0)
+                        morale=(morale-4).coerceAtLeast(0)
                     }
                 }
             }
