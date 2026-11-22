@@ -176,7 +176,7 @@ class WorldModel {
             val focusedId=fighters.firstOrNull{it.focusTargetId>=0}?.focusTargetId ?: -1
             val target=(if(focusedId>=0) enemies.firstOrNull{it.id==focusedId && it.health>0f} else null)
                 ?: enemies.filter{it.health>0f}
-                    .minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
+                    .minByOrNull{enemy -> fighters.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
             if(target!=null) {
                 val attackers=fighters.filter{distance(it.x,it.y,target.x,target.y)<if(it.role==Role.ARCHER)8.5f else 5.2f}
                 val damage=attackers.sumOf{if(it.role==Role.ARCHER)12.0 else 18.0}.toFloat()
