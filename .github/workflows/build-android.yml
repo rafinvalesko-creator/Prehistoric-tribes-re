@@ -16,6 +16,8 @@ on:
       - '.github/workflows/trigger-build-10.txt'
       - '.github/workflows/trigger-build-11.txt'
       - '.github/workflows/trigger-build-12.txt'
+      - '.github/workflows/trigger-build-13.txt'
+      - '.github/workflows/trigger-build-14.txt'
 
 permissions:
   contents: read
@@ -62,8 +64,13 @@ jobs:
           curl -fL --retry 3 https://github.com/skylot/jadx/releases/download/v1.5.2/jadx-1.5.2.zip -o /tmp/jadx.zip
           mkdir -p /tmp/jadx
           unzip -q /tmp/jadx.zip -d /tmp/jadx
-          /tmp/jadx/bin/jadx --no-res -d decompiled-jadx original/prehistoric-tribes-0.1.38.jar
+          /tmp/jadx/bin/jadx --no-res --show-bad-code -d decompiled-jadx original/prehistoric-tribes-0.1.38.jar
           cp -a decompiled-jadx/sources/. jlmod/app/src/midlet/java/
+          python3 -m compileall -q tools
+          if grep -R -n 'Method not decompiled:' jlmod/app/src/midlet/java --include='*.java'; then
+            echo 'JADX left runtime-failing method stubs; refusing to package an incomplete game.' >&2
+            exit 1
+          fi
           # Repair known JADX type-inference and name-shadowing errors using the original bytecode structure.
           python3 - <<'PY'
           from pathlib import Path
@@ -135,7 +142,7 @@ jobs:
             exit 1
           fi
           sed -i 's/^MIDlet-Name:.*/MIDlet-Name: Prehistoric Tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
-          sed -i 's/^MIDlet-1:.*/MIDlet-1: Prehistoric Tribes, , tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          sed -i 's/^MIDlet-1:.*/MIDlet-1: Prehistoric Tribes, , defpackage.tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
           sed -i 's/^MIDlet-Version:.*/MIDlet-Version: 0.1.38/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
           echo "MIDlet source files: $(find jlmod/app/src/midlet/java -name '*.java' | wc -l)"
           echo "Resource files: $(find jlmod/app/src/midlet/resources -type f | wc -l)"
