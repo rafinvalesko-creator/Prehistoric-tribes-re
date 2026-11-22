@@ -52,19 +52,21 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
         val ly=(event.y-offsetY)/viewScale
         if(lx !in 786f..944f) return true
         val action=((ly-105f)/30f).toInt()
-        when(action) {
-            0 -> model.construct(Structure.HUT)
-            1 -> model.construct(Structure.GRANARY)
-            2 -> model.construct(Structure.WOODCAMP)
-            3 -> model.construct(Structure.QUARRY)
-            4 -> model.construct(Structure.HUNTER_CAMP)
-            5 -> model.construct(Structure.WATCHTOWER)
-            6 -> model.construct(Structure.BONFIRE)
-            7 -> model.trainGuard()
-            8 -> model.construct(Structure.PALISADE)
-            else -> return true
+        synchronized(model) {
+            when(action) {
+                0 -> model.construct(Structure.HUT)
+                1 -> model.construct(Structure.GRANARY)
+                2 -> model.construct(Structure.WOODCAMP)
+                3 -> model.construct(Structure.QUARRY)
+                4 -> model.construct(Structure.HUNTER_CAMP)
+                5 -> model.construct(Structure.WATCHTOWER)
+                6 -> model.construct(Structure.BONFIRE)
+                7 -> model.trainGuard()
+                8 -> model.construct(Structure.PALISADE)
+                else -> return true
+            }
+            saveGame()
         }
-        saveGame()
         return true
     }
 
@@ -76,22 +78,24 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
     }
     override fun surfaceChanged(holder:SurfaceHolder,format:Int,width:Int,height:Int) {}
     override fun surfaceDestroyed(holder:SurfaceHolder) {
-        saveGame()
         running=false
         try { loop?.join(700) } catch (_:InterruptedException) {}
+        saveGame()
     }
     private fun saveGame() {
-        try {
-            context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
-                .edit().putString("world",model.saveState()).apply()
-        } catch (_:Exception) {}
+        synchronized(model) {
+            try {
+                context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
+                    .edit().putString("world",model.saveState()).apply()
+            } catch (_:Exception) {}
+        }
     }
 
     private fun loadSavedGame() {
         try {
             val data=context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
                 .getString("world",null)
-            if(data!=null && !model.loadState(data)) {
+            if(data!=null && !synchronized(model) { model.loadState(data) }) {
                 context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
                     .edit().remove("world").apply()
             }
@@ -103,7 +107,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             val now=System.nanoTime()
             val dt=((now-lastTick)/1_000_000_000.0).toFloat().coerceIn(0f,0.05f)
             lastTick=now
-            model.update(dt)
+            synchronized(model) { model.update(dt) }
             saveClock+=dt
             if(saveClock>=10f) {
                 saveClock=0f
@@ -115,7 +119,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
                 viewScale=scale
                 offsetX=(width-960f*scale)/2f
                 offsetY=(height-432f*scale)/2f
-                renderer.draw(canvas,width,height,model)
+                synchronized(model) { renderer.draw(canvas,width,height,model) }
                 holder.unlockCanvasAndPost(canvas)
             }
             try{Thread.sleep(16)}catch(_:InterruptedException){}
