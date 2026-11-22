@@ -426,6 +426,14 @@ private class WorldRenderer {
         p.textSize=10f;p.color=0xffa9b48c.toInt();c.drawText("ПОСЕЛЕНИЕ",26f,39f,p)
         p.textSize=14f;p.color=0xffe7d6ac.toInt()
         c.drawText("ДЕНЬ ${world.day} · ${world.seasonName}",180f,34f,p)
+        if(world.selectedUnitIds.isNotEmpty()) {
+            p.color=0xe52a382c.toInt()
+            c.drawRoundRect(18f,55f,300f,77f,5f,5f,p)
+            p.color=0xffffdf9b.toInt()
+            p.textSize=10f
+            p.typeface=Typeface.DEFAULT_BOLD
+            c.drawText("ВЫБРАНО: ${world.selectedInfo}",27f,69f,p)
+        }
         drawResource(c,280f,30f,"ЕДА",world.stock.food,0xffd7b35e.toInt())
         drawResource(c,390f,30f,"ДЕРЕВО",world.stock.wood,0xffad7746.toInt())
         drawResource(c,525f,30f,"КАМЕНЬ",world.stock.stone,0xffaab0a5.toInt())
