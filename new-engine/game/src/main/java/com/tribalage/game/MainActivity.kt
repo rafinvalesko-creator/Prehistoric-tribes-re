@@ -79,7 +79,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             val b=(ly-65f)/9f
             val tileX=(a+b)/2f
             val tileY=(b-a)/2f
-            synchronized(model) { model.selectOrOrder(tileX,tileY,longPress) }
+            synchronized(model) { model.selectOrOrder(tileX,tileY,longPress,longPress) }
             return true
         }
         if(lx !in 786f..944f) return true
@@ -432,7 +432,8 @@ private class WorldRenderer {
             p.color=0xffffdf9b.toInt()
             p.textSize=10f
             p.typeface=Typeface.DEFAULT_BOLD
-            c.drawText("ВЫБРАНО: ${world.selectedInfo}",27f,69f,p)
+            val holding=world.people.any{it.id in world.selectedUnitIds && it.holdPosition}
+            c.drawText("ВЫБРАНО: ${world.selectedInfo}${if(holding) " · ОБОРОНА" else ""}",27f,69f,p)
         }
         drawResource(c,280f,30f,"ЕДА",world.stock.food,0xffd7b35e.toInt())
         drawResource(c,390f,30f,"ДЕРЕВО",world.stock.wood,0xffad7746.toInt())
