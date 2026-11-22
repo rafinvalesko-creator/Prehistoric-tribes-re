@@ -74,7 +74,9 @@ jobs:
               raise SystemExit("Hand cursor draw call remains in battlefield renderer")
           if "pointerPressed(int, int)" not in text or "pointerReleased(int, int)" not in text:
               raise SystemExit("Direct touch handlers are missing from patched game class")
-          print("Verified: battlefield hand cursor calls removed; direct touch handlers present")
+          if text.count("Method touchDispatch:(I)V") < 5:
+              raise SystemExit("Expected touch dispatch for tap, swipe, long-press and both soft-key zones")
+          print("Verified: original cursor hidden; tap, swipe, long-press and both soft-key touch zones patched")
           PY
           cat > jlmod/app/src/main/java/ru/playsoftware/j2meloader/BundledGameActivity.java <<'JAVA'
           package ru.playsoftware.j2meloader;
@@ -105,7 +107,7 @@ jobs:
               private static final String GAME_NAME = "Prehistoric Tribes";
               private static final String GAME_DIR = "Prehistoric Tribes";
               private static final String JAR_ASSET = "prehistoric-tribes-0.1.38.jar";
-              private static final String PATCH_VERSION = "direct-touch-v3";
+              private static final String PATCH_VERSION = "direct-touch-v4-softkeys";
               private File workDir;
 
               private TextView status;
@@ -254,7 +256,7 @@ jobs:
           pattern = re.compile(r'(?m)^(\s*)Config\.startApp\(v\.getContext\(\), app\.getTitle\(\), app\.getPathExt\(\)\);')
           s, count = pattern.subn(
               lambda m: m.group(1) + 'try { ru.playsoftware.j2meloader.BundledGameActivity.enforceGameProfile(); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
-                        + m.group(1) + 'try (java.io.FileWriter marker = new java.io.FileWriter(new java.io.File(Config.getEmulatorDir(), "touch-patch-version.txt"))) { marker.write("direct-touch-v3"); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
+                        + m.group(1) + 'try (java.io.FileWriter marker = new java.io.FileWriter(new java.io.File(Config.getEmulatorDir(), "touch-patch-version.txt"))) { marker.write("direct-touch-v4-softkeys"); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
                         + m.group(1) + 'Config.startApp(v.getContext(), app.getTitle(), app.getPathExt());\n'
                         + m.group(1) + 'if (getActivity() != null) getActivity().finish();',
               s
