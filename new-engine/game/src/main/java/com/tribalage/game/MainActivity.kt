@@ -328,9 +328,11 @@ private class WorldRenderer {
         drawResource(c,660f,30f,"ШКУРЫ",world.stock.hides,0xffb98c65.toInt())
         c.drawText("ЛЮДИ ${world.population}",815f,34f,p)
         p.color=0xe51b2921.toInt();c.drawRoundRect(12f,382f,948f,423f,8f,8f,p)
-        p.color=0xffe7d6ac.toInt();p.textSize=13f;c.drawText(world.missionText,27f,407f,p)
-        p.color=0xffa9c38a.toInt();p.textSize=11f
-        c.drawText("Жители: ${world.people.size}   Защитники: ${world.people.count{it.role==Role.GUARD}}   Набеги: ${world.raidCount}",560f,407f,p)
+        p.color=0xffe7d6ac.toInt();p.textSize=13f;c.drawText(world.missionText,27f,400f,p)
+        p.color=0xffa9c38a.toInt();p.textSize=10f
+        c.drawText("Жители: ${world.people.size}   Стража: ${world.people.count{it.role==Role.GUARD}}   Набеги: ${world.raidCount}   Боевой дух: ${world.morale}",27f,415f,p)
+        p.color=0xffd6a07a.toInt()
+        c.drawText(world.lastBattleText,560f,415f,p)
         if(world.raidWarning>0f) {
             p.color=0xffffd18a.toInt();p.textSize=20f;p.typeface=Typeface.DEFAULT_BOLD
             c.drawText("ВРАЖЕСКИЙ НАБЕГ!",370f,80f,p)
