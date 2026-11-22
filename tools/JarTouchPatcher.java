@@ -52,7 +52,7 @@ public final class JarTouchPatcher {
     };
     ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
       boolean target;
-      boolean hasPress, hasRelease, hasDispatch, hasX, hasY;
+      boolean hasPress, hasRelease, hasDispatch, hasX, hasY, hasTime;
       @Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         target = TARGET.equals(name);
         if (!target) throw new IllegalStateException("Expected game class g, got " + name);
@@ -61,6 +61,7 @@ public final class JarTouchPatcher {
       @Override public FieldVisitor visitField(int access, String name, String desc, String sig, Object value) {
         if (name.equals("touchStartX")) hasX = true;
         if (name.equals("touchStartY")) hasY = true;
+        if (name.equals("touchStartTime")) hasTime = true;
         return super.visitField(access, name, desc, sig, value);
       }
       @Override public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] exceptions) {
@@ -72,6 +73,7 @@ public final class JarTouchPatcher {
       @Override public void visitEnd() {
         if (!hasX) super.visitField(Opcodes.ACC_PRIVATE, "touchStartX", "I", null, null).visitEnd();
         if (!hasY) super.visitField(Opcodes.ACC_PRIVATE, "touchStartY", "I", null, null).visitEnd();
+        if (!hasTime) super.visitField(Opcodes.ACC_PRIVATE, "touchStartTime", "J", null, null).visitEnd();
         if (!hasPress) addPointerPressed(cv());
         if (!hasRelease) addPointerReleased(cv());
         if (!hasDispatch) addTouchDispatch(cv());
@@ -85,6 +87,9 @@ public final class JarTouchPatcher {
         m.visitFieldInsn(Opcodes.PUTFIELD, TARGET, "touchStartX", "I");
         m.visitVarInsn(Opcodes.ALOAD, 0); m.visitVarInsn(Opcodes.ILOAD, 2);
         m.visitFieldInsn(Opcodes.PUTFIELD, TARGET, "touchStartY", "I");
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "currentTimeMillis", "()J", false);
+        m.visitFieldInsn(Opcodes.PUTFIELD, TARGET, "touchStartTime", "J");
         m.visitInsn(Opcodes.RETURN);
         m.visitMaxs(0,0); m.visitEnd();
       }
@@ -101,6 +106,20 @@ public final class JarTouchPatcher {
         m.visitVarInsn(Opcodes.ILOAD,3); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitVarInsn(Opcodes.ILOAD,4); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitInsn(Opcodes.IADD); m.visitIntInsn(Opcodes.BIPUSH,18); m.visitJumpInsn(Opcodes.IF_ICMPGT,swipe);
+        // A stationary long press opens the original game's context/action menu.
+        Label shortTap = new Label();
+        m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/System","currentTimeMillis","()J",false);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"touchStartTime","J");
+        m.visitInsn(Opcodes.LSUB);
+        m.visitLdcInsn(450L);
+        m.visitInsn(Opcodes.LCMP);
+        m.visitJumpInsn(Opcodes.IFLE,shortTap);
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitIntInsn(Opcodes.BIPUSH,42);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
+        m.visitJumpInsn(Opcodes.GOTO,done);
+        m.visitLabel(shortTap);
         // In the battlefield state, convert the tap position into the game's 22x16 map grid.
         Label notMap = new Label(), mapTap = new Label(), menuTap = new Label(), menuIndexOk = new Label();
         m.visitVarInsn(Opcodes.ALOAD,0);
