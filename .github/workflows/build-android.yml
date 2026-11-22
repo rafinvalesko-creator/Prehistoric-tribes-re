@@ -130,7 +130,7 @@ jobs:
                       ProfileModel profile = new ProfileModel(profileDir);
                       profile.orientation = 2;
                       profile.touchInput = true;
-                      profile.showKeyboard = true;
+                      profile.showKeyboard = false;
                       if (!ProfilesManager.saveConfig(profile)) {
                           throw new IOException("Не удалось сохранить настройки сенсорного управления");
                       }
@@ -197,6 +197,7 @@ jobs:
           if s.count('android:name=".MainActivity"') != 1:
               raise SystemExit("Expected one MainActivity manifest entry")
           s = s.replace('android:name=".MainActivity"', 'android:name=".BundledGameActivity"', 1)
+          s = s.replace('android:name=".BundledGameActivity"', 'android:name=".BundledGameActivity" android:screenOrientation="landscape"', 1)
           s = s.replace('    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"\n        android:minSdkVersion="30"\n        tools:ignore="ScopedStorage" />\n', '')
           s = s.replace('    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"\n        android:maxSdkVersion="29" />\n', '')
           manifest.write_text(s)
