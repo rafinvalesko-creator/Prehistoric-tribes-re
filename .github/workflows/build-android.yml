@@ -89,6 +89,8 @@ jobs:
               private static final String GAME_NAME = "Prehistoric Tribes";
               private static final String GAME_DIR = "Prehistoric Tribes";
               private static final String JAR_ASSET = "prehistoric-tribes-0.1.38.jar";
+              private static final String PATCH_VERSION = "direct-touch-v2";
+              private File workDir;
 
               private TextView status;
 
@@ -106,7 +108,7 @@ jobs:
                       return;
                   }
 
-                  File workDir = new File(externalFiles, "game-runtime");
+                  workDir = new File(externalFiles, "game-runtime");
                   PreferenceManager.getDefaultSharedPreferences(this).edit()
                           .putString(Constants.PREF_EMULATOR_DIR, workDir.getAbsolutePath())
                           .apply();
@@ -137,6 +139,9 @@ jobs:
                   // cannot silently bring the virtual controls back.
                   ProfileModel profile = new ProfileModel(profileDir);
                   profile.orientation = 3; // MicroActivity.ORIENTATION_LANDSCAPE
+                  profile.screenWidth = 320;
+                  profile.screenHeight = 240;
+                  profile.forceFullscreen = true;
                   profile.touchInput = true;
                   profile.showKeyboard = false;
                   if (!ProfilesManager.saveConfig(profile)) {
@@ -148,8 +153,9 @@ jobs:
                   File appDir = new File(Config.getAppDir(), GAME_DIR);
                   File jar = new File(appDir, "res.jar");
                   File dex = new File(appDir, "converted.zip");
+                  File marker = new File(workDir, "touch-patch-version.txt");
 
-                  if (jar.isFile() && dex.isFile()) {
+                  if (jar.isFile() && dex.isFile() && isCurrentBuild(marker)) {
                       Config.startApp(this, GAME_NAME, appDir.getAbsolutePath());
                       finish();
                       return;
@@ -157,6 +163,9 @@ jobs:
 
                   if (appDir.exists()) {
                       FileUtils.deleteDirectory(appDir);
+                  }
+                  if (marker.exists() && !marker.delete()) {
+                      throw new IOException("Не удалось обновить версию сенсорного управления");
                   }
 
                   File bundledJar = new File(getCacheDir(), JAR_ASSET);
@@ -172,6 +181,15 @@ jobs:
                   status.setText("Первый запуск: установите встроенную игру в открывшемся окне.\nНажмите сюда, если нужно повторить установку.");
                   status.setOnClickListener(v -> showInstaller(bundledJar));
                   showInstaller(bundledJar);
+              }
+
+              private boolean isCurrentBuild(File marker) {
+                  if (!marker.isFile()) return false;
+                  try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(marker))) {
+                      return PATCH_VERSION.equals(reader.readLine());
+                  } catch (IOException e) {
+                      return false;
+                  }
               }
 
               private void showInstaller(File jar) {
@@ -205,6 +223,7 @@ jobs:
               raise SystemExit("Expected one MainActivity manifest entry")
           s = s.replace('android:name=".MainActivity"', 'android:name=".BundledGameActivity"', 1)
           s = s.replace('android:name=".BundledGameActivity"', 'android:name=".BundledGameActivity" android:screenOrientation="landscape"', 1)
+          s = s.replace('android:name="javax.microedition.shell.MicroActivity"', 'android:name="javax.microedition.shell.MicroActivity" android:screenOrientation="landscape"', 1)
           s = s.replace('    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"\n        android:minSdkVersion="30"\n        tools:ignore="ScopedStorage" />\n', '')
           s = s.replace('    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"\n        android:maxSdkVersion="29" />\n', '')
           manifest.write_text(s)
@@ -213,7 +232,8 @@ jobs:
           s = installer.read_text()
           pattern = re.compile(r'(?m)^(\s*)Config\.startApp\(v\.getContext\(\), app\.getTitle\(\), app\.getPathExt\(\)\);')
           s, count = pattern.subn(
-              lambda m: m.group(1) + 'Config.startApp(v.getContext(), app.getTitle(), app.getPathExt());\n'
+              lambda m: m.group(1) + 'try (java.io.FileWriter marker = new java.io.FileWriter(new java.io.File(Config.getEmulatorDir(), "touch-patch-version.txt"))) { marker.write("direct-touch-v2"); } catch (java.io.IOException e) { throw new RuntimeException(e); }\n'
+                        + m.group(1) + 'Config.startApp(v.getContext(), app.getTitle(), app.getPathExt());\n'
                         + m.group(1) + 'if (getActivity() != null) getActivity().finish();',
               s
           )
