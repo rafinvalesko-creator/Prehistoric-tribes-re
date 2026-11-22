@@ -571,7 +571,66 @@ class WorldModel {
         }
         raidWarning=0f
         true
-    } catch(_:Exception) { false }
+    } catch(_:Exception) {
+        resetToNewGame()
+        false
+    }
+
+    private fun resetToNewGame() {
+        day=1
+        population=12
+        morale=86
+        raidCount=0
+        elapsed=0f
+        season=0
+        raidWarning=0f
+        firePulse=0f
+        dayClock=0f
+        raidClock=95f
+        growthClock=0f
+        nextId=1
+        guardVolley=0f
+        missionStage=0
+        technologyClock=0f
+        completedMissions=0
+        missionText="Развивайте поселение и переживите набеги"
+        lastBattleText="Поселение спокойно"
+        unlockedTechnologies.clear()
+        stock.food=145
+        stock.wood=110
+        stock.stone=70
+        stock.hides=12
+        for(y in 0 until height) for(x in 0 until width) tiles[y][x]=makeTile(x,y)
+        buildings.clear()
+        people.clear()
+        enemies.clear()
+        buildings += StructureState(nextId++,Structure.GREAT_HALL,11.5f,7.5f)
+        buildings += StructureState(nextId++,Structure.HUT,9.4f,8.8f)
+        buildings += StructureState(nextId++,Structure.HUT,13.3f,8.9f)
+        buildings += StructureState(nextId++,Structure.HUT,12.3f,5.8f)
+        buildings += StructureState(nextId++,Structure.GRANARY,10.2f,5.7f)
+        buildings += StructureState(nextId++,Structure.WOODCAMP,7.0f,8.0f)
+        buildings += StructureState(nextId++,Structure.QUARRY,15.2f,8.0f)
+        buildings += StructureState(nextId++,Structure.HUNTER_CAMP,8.0f,5.5f)
+        buildings += StructureState(nextId++,Structure.WATCHTOWER,14.5f,6.0f)
+        buildings += StructureState(nextId++,Structure.BONFIRE,11.5f,9.6f)
+        buildings += StructureState(nextId++,Structure.PALISADE,8.8f,7.8f)
+        buildings += StructureState(nextId++,Structure.PALISADE,9.3f,10.2f)
+        buildings += StructureState(nextId++,Structure.PALISADE,11.0f,11.0f)
+        buildings += StructureState(nextId++,Structure.PALISADE,13.5f,10.6f)
+        buildings += StructureState(nextId++,Structure.PALISADE,15.0f,8.4f)
+        buildings += StructureState(nextId++,Structure.PALISADE,14.4f,5.2f)
+        buildings += StructureState(nextId++,Structure.PALISADE,11.0f,4.4f)
+        buildings += StructureState(nextId++,Structure.PALISADE,8.8f,5.1f)
+        for(i in 0 until 7) {
+            val x=10.4f+(i%4)*0.65f
+            val y=9.9f+(i/4)*0.55f
+            people += Villager(nextId++,if(i==0) Role.BUILDER else Role.GATHERER,x,y,x,y)
+        }
+        for(i in 0 until 3) people += Villager(nextId++,Role.HUNTER,8.5f+i*0.4f,6.6f,8.5f+i*0.4f,6.6f)
+        for(i in 0 until 2) people += Villager(nextId++,Role.GUARD,12.4f+i*0.5f,9.4f,12.4f+i*0.5f,9.4f)
+        for(i in 0 until 5) enemies += Villager(nextId++,Role.RAIDER,20f+(i%2)*0.6f,3.0f+(i/2)*0.7f,20f,3f)
+    }
 
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
