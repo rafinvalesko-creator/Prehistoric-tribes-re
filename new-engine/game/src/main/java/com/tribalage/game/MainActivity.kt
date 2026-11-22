@@ -51,7 +51,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
         val lx=(event.x-offsetX)/viewScale
         val ly=(event.y-offsetY)/viewScale
         if(lx !in 786f..944f) return true
-        val action=((ly-106f)/33f).toInt()
+        val action=((ly-105f)/30f).toInt()
         when(action) {
             0 -> model.construct(Structure.HUT)
             1 -> model.construct(Structure.GRANARY)
@@ -61,6 +61,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             5 -> model.construct(Structure.WATCHTOWER)
             6 -> model.construct(Structure.BONFIRE)
             7 -> model.trainGuard()
+            8 -> model.construct(Structure.PALISADE)
             else -> return true
         }
         saveGame()
@@ -411,28 +412,29 @@ private class WorldRenderer {
             "Охотничий лагерь  Е16 Д22 К5",
             "Сторожевая башня  Е8 Д32 К20",
             "Костёр  Е12 Д18 К4",
-            "Обучить стражника  Е18 Ш2"
+            "Обучить стражника  Е18 Ш2",
+            "Частокол  Е5 Д15 К5"
         )
         val costs=arrayOf(
             intArrayOf(35,24,8),intArrayOf(25,30,12),intArrayOf(12,28,4),
             intArrayOf(10,20,16),intArrayOf(16,22,5),intArrayOf(8,32,20),
-            intArrayOf(12,18,4),intArrayOf(18,0,0)
+            intArrayOf(12,18,4),intArrayOf(18,0,0),intArrayOf(5,15,5)
         )
         val canTrain=world.stock.food>=18 && world.stock.hides>=2 &&
             world.people.any{it.role==Role.GATHERER} && world.people.count{it.role==Role.GUARD}<8
         for(i in labels.indices) {
-            val top=106f+i*33f
+            val top=105f+i*30f
             val affordable=if(i==7) canTrain else world.stock.canAfford(costs[i][0],costs[i][1],costs[i][2])
             p.color=if(affordable) (if(i==7)0xff594832.toInt() else 0xff354a38.toInt()) else 0xff493632.toInt()
-            c.drawRoundRect(788f,top,940f,top+28f,5f,5f,p)
+            c.drawRoundRect(788f,top,940f,top+25f,5f,5f,p)
             p.color=if(affordable)0xffeee0bd.toInt() else 0xffc08c7c.toInt()
             p.typeface=Typeface.DEFAULT;p.textSize=9.5f
-            c.drawText(labels[i],793f,top+18f,p)
+            c.drawText(labels[i],793f,top+16.5f,p)
         }
         p.color=0xffd7c18c.toInt();p.textSize=8.5f
         val tools=if("Орудия труда" in world.unlockedTechnologies)"✓" else "—"
         val storage=if("Хранение запасов" in world.unlockedTechnologies)"✓" else "—"
-        c.drawText("Орудия $tools · Хранилище $storage",792f,373f,p)
+        c.drawText("Орудия $tools · Хранилище $storage",792f,380f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
