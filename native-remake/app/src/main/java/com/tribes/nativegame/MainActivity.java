@@ -183,9 +183,10 @@ public class MainActivity extends Activity {
             if(paused){paused=false;return;}
             if(y<82&&x>1160){togglePause();return;}
             if(y>610){int idx=(int)((x-16)/156);if(idx>=0&&idx<8){switch(idx){case 0:assign(0);break;case 1:assign(1);break;case 2:assign(2);break;case 3:assign(3);break;case 4:assign(4);break;case 5:buildMenu=!buildMenu;buildChoice=-1;break;case 6:assign(6);break;case 7:assign(8);break;}}return;}
-            if(buildMenu&&y>475&&y<608){int col=(int)((x-18)/178),row=(int)((y-480)/58),n=row*7+col;if(n>=0&&n<buildNames.length){buildChoice=n;notice=buildNames[n]+": "+buildWood[n]+" дерева, "+buildStone[n]+" камня";}return;}
-            if(buildChoice>=0&&y>88&&y<605){build(buildChoice,x+camX,y-88+camY);return;}
-            if(y>88&&y<605){float wx=x+camX,wy=y-88+camY;int hit=-1;float d=Float.MAX_VALUE;for(int i=0;i<people.size();i++){Person q=people.get(i);float z=(q.x-wx)*(q.x-wx)+(q.y-wy)*(q.y-wy);if(z<d){d=z;hit=i;}}if(d<1800){selected=hit;notice=people.get(hit).name+" — "+tasks[Math.max(0,Math.min(7,people.get(hit).task))];}else{selected=-1;notice="Выбери человека или назначь задачу.";} }
+            // Палитра зданий обрабатывается до касания карты.
+            if(buildMenu&&y>=472&&y<610){int col=(int)((x-20)/178),row=(int)((y-482)/55),n=row*7+col;if(col>=0&&col<7&&row>=0&&n<buildNames.length){buildChoice=n;notice=buildNames[n]+": "+buildWood[n]+" дерева, "+buildStone[n]+" камня";}return;}
+            if(buildChoice>=0&&y>=88&&y<610){build(buildChoice,x+camX,y-88+camY);return;}
+            if(y>88&&y<605){float wx=x+camX,wy=y-88+camY;int hit=-1;float d=Float.MAX_VALUE;for(int i=0;i<people.size();i++){Person q=people.get(i);float z=(q.x-wx)*(q.x-wx)+(q.y-wy)*(q.y-wy);if(z<d){d=z;hit=i;}}if(d<1800){selected=hit;notice=people.get(hit).name+" — "+tasks[Math.max(0,Math.min(8,people.get(hit).task))];}else{selected=-1;notice="Выбери человека или назначь задачу.";} }
         }
         void drawWorld(Canvas c){
             p.setColor(Color.rgb(112,164,76));c.drawRect(0,88,VW,610,p);
@@ -233,7 +234,7 @@ public class MainActivity extends Activity {
             p.setTextSize(18);c.drawText("Еда  "+food,340,37,p);c.drawText("Дерево  "+wood,475,37,p);c.drawText("Камень  "+stone,650,37,p);c.drawText("Орудия  "+tools,820,37,p);
             p.setTextSize(14);p.setColor(Color.rgb(250,231,185));c.drawText("Людей: "+people.size()+"  •  Цель: "+missionText()+"  •  "+notice,28,63,p);
             p.setColor(Color.rgb(160,73,48));c.drawRoundRect(1190,15,1254,66,12,12,p);p.setColor(Color.WHITE);p.setTextSize(18);c.drawText(paused?"▶":"Ⅱ",1210,48,p);
-            if(selected>=0&&selected<people.size()){Person q=people.get(selected);p.setColor(Color.rgb(65,52,38));c.drawRoundRect(970,14,1178,68,10,10,p);p.setColor(Color.WHITE);p.setTextSize(15);c.drawText(q.name+"  "+tasks[Math.max(0,Math.min(7,q.task))],985,36,p);p.setTextSize(12);c.drawText("Сытость "+(int)(100-q.hunger)+"%  Силы "+(int)q.energy+"%",985,56,p);}
+            if(selected>=0&&selected<people.size()){Person q=people.get(selected);p.setColor(Color.rgb(65,52,38));c.drawRoundRect(970,14,1178,68,10,10,p);p.setColor(Color.WHITE);p.setTextSize(15);c.drawText(q.name+"  "+tasks[Math.max(0,Math.min(8,q.task))],985,36,p);p.setTextSize(12);c.drawText("Сытость "+(int)(100-q.hunger)+"%  Силы "+(int)q.energy+"%",985,56,p);}
         }
         void drawActions(Canvas c){
             p.setColor(Color.rgb(63,48,37));c.drawRect(0,610,VW,VH,p);
