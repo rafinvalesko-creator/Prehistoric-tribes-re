@@ -32,3 +32,5 @@ These systems are part of the clean-room prototype and are still being balanced.
 
 - Campaign milestones track gathering supplies, expanding housing, repelling the first raid, and unlocking core technologies.
 - Technology progression unlocks improved tool use (faster gathering) and expanded storage capacity.
+
+- Game state is serialized locally and restored automatically on launch; progress is autosaved during play and when the game surface closes.
