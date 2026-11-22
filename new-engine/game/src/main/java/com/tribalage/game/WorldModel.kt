@@ -65,6 +65,14 @@ class WorldModel {
         buildings += StructureState(nextId++,Structure.HUNTER_CAMP,8.0f,5.5f)
         buildings += StructureState(nextId++,Structure.WATCHTOWER,14.5f,6.0f)
         buildings += StructureState(nextId++,Structure.BONFIRE,11.5f,9.6f)
+        buildings += StructureState(nextId++,Structure.PALISADE,8.8f,7.8f)
+        buildings += StructureState(nextId++,Structure.PALISADE,9.3f,10.2f)
+        buildings += StructureState(nextId++,Structure.PALISADE,11.0f,11.0f)
+        buildings += StructureState(nextId++,Structure.PALISADE,13.5f,10.6f)
+        buildings += StructureState(nextId++,Structure.PALISADE,15.0f,8.4f)
+        buildings += StructureState(nextId++,Structure.PALISADE,14.4f,5.2f)
+        buildings += StructureState(nextId++,Structure.PALISADE,11.0f,4.4f)
+        buildings += StructureState(nextId++,Structure.PALISADE,8.8f,5.1f)
         for (i in 0 until 7) {
             val x=10.4f+(i%4)*0.65f
             val y=9.9f+(i/4)*0.55f
@@ -80,7 +88,7 @@ class WorldModel {
         val dx=x-11.5f
         val dy=y-7.5f
         val nearBase=abs(dx)<4.2f && abs(dy)<3.4f
-        val river=abs(y-(3.5+0.34*x+1.2*kotlin.math.sin(x*0.42)))<0.72
+        val river=abs(y-(2.0+0.11*x+0.7*kotlin.math.sin(x*0.42)))<0.72
         val ground=when {
             river && x<19 -> Ground.WATER
             !nearBase && r.nextInt(100)<9 -> Ground.SAND
@@ -176,6 +184,7 @@ class WorldModel {
                     when(tile.node) {
                         NodeKind.TREE -> stock.wood+=p.carrying
                         NodeKind.ROCK -> stock.stone+=p.carrying
+                        NodeKind.DEER -> { stock.hides+=p.carrying; stock.food+=p.carrying }
                         else -> stock.food+=p.carrying
                     }
                     p.carrying=0
