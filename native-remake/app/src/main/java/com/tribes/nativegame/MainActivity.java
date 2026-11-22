@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     static final class GameView extends View {
         static final float VW=1280, VH=720;
         final Paint p=new Paint(3);
-        Bitmap originalAtlas;
+        Bitmap originalAtlas, originalHeads;
         final Rect spriteSrc=new Rect();
         final RectF spriteDst=new RectF();
         final Random random=new Random(17);
@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
         GameView(Context c) {
             super(c); prefs=c.getSharedPreferences("tribe_save",0);
             setLayerType(View.LAYER_TYPE_SOFTWARE,null);
-            try{originalAtlas=BitmapFactory.decodeStream(c.getAssets().open("tribe_atlas.png"));}catch(Exception ignored){}
+            try{originalAtlas=BitmapFactory.decodeStream(c.getAssets().open("tribe_atlas.png"));}catch(Exception ignored){} try{originalHeads=BitmapFactory.decodeStream(c.getAssets().open("tribe_heads.png"));}catch(Exception ignored){}
             load();
             if (people.isEmpty()) newGame(); else if (nodes.isEmpty()) seedNodes();
         }
@@ -243,8 +243,7 @@ public class MainActivity extends Activity {
             if(isSelected){p.setColor(Color.argb(120,255,236,91));c.drawCircle(q.x,q.y+3,26,p);}
             p.setColor(Color.argb(70,30,40,25));c.drawOval(q.x-12,q.y+10,q.x+13,q.y+17,p);
             p.setColor(q.male?Color.rgb(174,105,64):Color.rgb(211,151,106));c.drawRoundRect(q.x-10,q.y-5,q.x+10,q.y+15,8,8,p);
-            p.setColor(Color.rgb(231,188,143));c.drawCircle(q.x,q.y-11,9,p);
-            p.setColor(q.male?Color.rgb(67,42,27):Color.rgb(83,47,28));c.drawArc(q.x-10,q.y-21,q.x+10,q.y-3,180,180,true,p);
+            if(originalHeads!=null){spriteSrc.set(q.male?0:0,q.male?0:30,q.male?8:8,q.male?8:38);spriteDst.set(q.x-11,q.y-23,q.x+11,q.y-1);p.setFilterBitmap(false);c.drawBitmap(originalHeads,spriteSrc,spriteDst,p);}else{p.setColor(Color.rgb(231,188,143));c.drawCircle(q.x,q.y-11,9,p);p.setColor(q.male?Color.rgb(67,42,27):Color.rgb(83,47,28));c.drawArc(q.x-10,q.y-21,q.x+10,q.y-3,180,180,true,p);}
             p.setColor(Color.WHITE);p.setTextSize(12);p.setTextAlign(Paint.Align.CENTER);c.drawText(q.name,q.x,q.y+31,p);p.setTextAlign(Paint.Align.LEFT);
             if(q.hunger>75){p.setColor(Color.RED);c.drawCircle(q.x+13,q.y-23,4,p);}
         }
