@@ -92,6 +92,27 @@ jobs:
           s = s.replace('this.f0a = Connector.open(this.c);', 'this.f0a = (MessageConnection) Connector.open(this.c);')
           s = s.replace('TextMessage textMessageNewMessage = this.f0a.newMessage("text");', 'TextMessage textMessageNewMessage = (TextMessage) this.f0a.newMessage("text");')
           p.write_text(s)
+          p = root / 'c.java'
+          s = p.read_text()
+          old = """                            } else {
+                                this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
+                            }
+                        }
+                    }
+                    if (this.f80O < 120 - this.f7b[this.f8a[298] + this.f31g]) {"""
+          new = """                            } else {
+                                this.f80O = (byte) (120 - this.f7b[this.f8a[298] + this.f31g]);
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    if (this.f80O < 120 - this.f7b[this.f8a[298] + this.f31g]) {"""
+          if old not in s:
+              raise SystemExit('Expected c.java loop not found; refusing unsafe patch')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
           PY
           test -n "$(find jlmod/app/src/midlet/java -type f -name '*.java' -print -quit)"
           unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
