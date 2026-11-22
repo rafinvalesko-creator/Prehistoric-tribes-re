@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 enum class Ground { GRASS, DARK_GRASS, SAND, WATER, MUD }
 enum class NodeKind { TREE, ROCK, BERRY, DEER }
-enum class Role { GATHERER, HUNTER, BUILDER, GUARD, RAIDER }
+enum class Role { GATHERER, HUNTER, BUILDER, GUARD, ARCHER, RAIDER }
 enum class Structure { GREAT_HALL, HUT, GRANARY, WOODCAMP, QUARRY, HUNTER_CAMP, WATCHTOWER, BONFIRE, PALISADE }
 
 data class MapTile(val x:Int, val y:Int, val ground:Ground, var node:NodeKind? = null, var amount:Int = 0)
@@ -172,14 +172,18 @@ class WorldModel {
         guardVolley+=dt
         if(guardVolley>=0.85f) {
             guardVolley=0f
-            val guards=people.filter{it.role==Role.GUARD && it.health>0f}
-            val focusedId=guards.firstOrNull{it.focusTargetId>=0}?.focusTargetId ?: -1
+            val fighters=people.filter{(it.role==Role.GUARD || it.role==Role.ARCHER) && it.health>0f}
+            val focusedId=fighters.firstOrNull{it.focusTargetId>=0}?.focusTargetId ?: -1
             val target=(if(focusedId>=0) enemies.firstOrNull{it.id==focusedId && it.health>0f} else null)
                 ?: enemies.filter{it.health>0f}
                     .minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
-            if(target!=null && guards.any{distance(it.x,it.y,target.x,target.y)<5.2f}) {
-                target.health-=18f
-                lastBattleText="Стража атакует налётчиков"
+            if(target!=null) {
+                val attackers=fighters.filter{distance(it.x,it.y,target.x,target.y)<if(it.role==Role.ARCHER)8.5f else 5.2f}
+                val damage=attackers.sumOf{if(it.role==Role.ARCHER)12.0 else 18.0}.toFloat()
+                if(damage>0f) {
+                    target.health-=damage
+                    lastBattleText=if(attackers.any{it.role==Role.ARCHER}) "Лучники обстреливают налётчиков" else "Стража атакует налётчиков"
+                }
             }
             // Watchtowers automatically fire at the nearest raider in range.
             val towers=buildings.filter{it.type==Structure.WATCHTOWER && it.health>0f}
@@ -227,7 +231,7 @@ class WorldModel {
                     if(p.holdPosition || p.manualOrderTime>0f) continue
                 }
             }
-            if(p.role==Role.GUARD) {
+            if(p.role==Role.GUARD || p.role==Role.ARCHER) {
                 if(p.health<35f) {
                     val hall=buildings.firstOrNull { it.type==Structure.GREAT_HALL }
                     val homeX=hall?.x ?: 11.5f
@@ -246,8 +250,9 @@ class WorldModel {
                 }
                 val target=(if(p.focusTargetId>=0) enemies.firstOrNull { it.id==p.focusTargetId && it.health>0f } else null)
                     ?: enemies.filter { it.health>0f }.minByOrNull { distance(p.x,p.y,it.x,it.y) }
-                if(target!=null && distance(p.x,p.y,target.x,target.y)<7.0f) {
-                    if(distance(p.x,p.y,target.x,target.y)>1.05f) move(p,target.x,target.y,dt,0.92f)
+                if(target!=null && distance(p.x,p.y,target.x,target.y)<9.0f) {
+                    val preferredRange=if(p.role==Role.ARCHER)4.2f else 1.05f
+                    if(distance(p.x,p.y,target.x,target.y)>preferredRange) move(p,target.x,target.y,dt,0.92f)
                 } else {
                     val homeX=12.4f+(p.id%3)*0.45f
                     val homeY=9.3f
@@ -510,6 +515,23 @@ class WorldModel {
         return true
     }
 
+    fun trainArcher():Boolean {
+        if(stock.food<24 || stock.hides<4 || people.count{it.role==Role.ARCHER}>=6) {
+            lastBattleText="Для лучника нужны 24 еды и 4 шкуры; предел — 6"
+            return false
+        }
+        val recruit=people.firstOrNull{it.role==Role.GATHERER}
+        if(recruit==null) {
+            lastBattleText="Нет свободного собирателя для обучения лучника"
+            return false
+        }
+        stock.food-=24
+        stock.hides-=4
+        people[people.indexOf(recruit)]=recruit.copy(role=Role.ARCHER,taskNode=-1,carrying=0,focusTargetId=-1)
+        lastBattleText="Собиратель обучен стрельбе из лука"
+        return true
+    }
+
     private fun structureName(type:Structure)=when(type) {
         Structure.HUT -> "хижина"
         Structure.GRANARY -> "амбар"
@@ -694,6 +716,7 @@ class WorldModel {
             val count=selectedUnitIds.size
             selectedInfo=(when(nearby.role) {
                 Role.GUARD -> "Стража"
+                Role.ARCHER -> "Лучники"
                 Role.BUILDER -> "Строители"
                 Role.HUNTER -> "Охотники"
                 else -> "Собиратели"
@@ -710,9 +733,9 @@ class WorldModel {
         val enemy=enemies.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
         val attackTarget=enemy?.takeIf{distance(it.x,it.y,x,y)<1.0f}
         if(attackTarget!=null) {
-            val guards=selected.filter{it.role==Role.GUARD}
+            val guards=selected.filter{it.role==Role.GUARD || it.role==Role.ARCHER}
             if(guards.isEmpty()) {
-                lastBattleText="Атаковать могут только стражники"
+                lastBattleText="Атаковать могут только бойцы"
                 return true
             }
             guards.forEach { unit ->
