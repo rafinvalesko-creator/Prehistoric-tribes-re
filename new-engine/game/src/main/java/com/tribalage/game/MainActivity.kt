@@ -85,6 +85,7 @@ private class WorldRenderer {
         p.style=Paint.Style.FILL
         drawGround(c,world)
         drawDecor(c,world)
+        drawEnemyCamp(c)
         drawBuildings(c,world)
         drawUnits(c,world)
         drawLighting(c,world)
@@ -161,6 +162,23 @@ private class WorldRenderer {
         p.color=0xff9a7047.toInt();c.drawOval(x-9f,y-10f,x+9f,y-2f,p);c.drawCircle(x+8f,y-10f,4f,p)
         p.color=0xff6d4b30.toInt();c.drawLine(x-5f,y-3f,x-7f,y+5f,p);c.drawLine(x+5f,y-3f,x+7f,y+5f,p)
         p.color=0xffe3d3ad.toInt();c.drawLine(x+8f,y-14f,x+11f,y-20f,p);c.drawLine(x+8f,y-14f,x+5f,y-20f,p)
+    }
+
+    private fun drawEnemyCamp(c:Canvas) {
+        val x=sx(20.5f,2.5f)
+        val y=sy(20.5f,2.5f)
+        p.color=0x5533261b;c.drawOval(x-38f,y,x+38f,y+9f,p)
+        p.color=0xff684b35.toInt()
+        c.drawLine(x-30f,y+1f,x-4f,y-33f,p);c.drawLine(x+28f,y+1f,x-4f,y-33f,p)
+        c.drawLine(x-30f,y+1f,x+28f,y+1f,p)
+        p.color=0xff9a7147.toInt()
+        val tent=Path().apply{moveTo(x-30f,y+1f);lineTo(x-4f,y-33f);lineTo(x+28f,y+1f);close()}
+        c.drawPath(tent,p)
+        p.color=0xff603e2c.toInt();c.drawRect(x-5f,y-15f,x+5f,y+1f,p)
+        p.color=0xff8e3c31.toInt();c.drawLine(x+18f,y-31f,x+18f,y-55f,p)
+        val flag=Path().apply{moveTo(x+18f,y-55f);lineTo(x+38f,y-48f);lineTo(x+18f,y-42f);close()}
+        c.drawPath(flag,p)
+        p.color=0xffb99b6c.toInt();c.drawCircle(x-34f,y-4f,4f,p);c.drawCircle(x+34f,y-4f,4f,p)
     }
 
     private fun drawBuildings(c:Canvas,world:WorldModel) {
@@ -286,7 +304,7 @@ private class WorldRenderer {
         val t=(world.elapsed%48f)/48f
         val darkness=if(t<0.25f || t>0.78f)0.26f else 0f
         if(darkness>0f) {
-            p.color=(darkness*255).toInt().shl(24) or 0xff101c35.toInt()
+            p.color=(darkness*255).toInt().shl(24) or 0x00101c35
             c.drawRect(0f,54f,960f,380f,p)
         }
         if(world.raidWarning>0f) {
