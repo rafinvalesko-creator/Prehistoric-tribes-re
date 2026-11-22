@@ -11,6 +11,7 @@ on:
       - '.github/workflows/trigger-build-5.txt'
       - '.github/workflows/trigger-build-6.txt'
       - '.github/workflows/trigger-build-7.txt'
+      - '.github/workflows/trigger-build-8.txt'
 
 permissions:
   contents: read
@@ -86,6 +87,14 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon :app:assembleMidletDebug
+
+      - name: Save decompiled sources for diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prehistoric-tribes-decompiled-sources
+          path: jlmod/app/src/midlet/java/**/*.java
+          if-no-files-found: warn
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
