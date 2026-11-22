@@ -1,1 +1,1 @@
-Build APK from original embedded Java ME JAR, no decompilation.
+Build with injected whole-game touch input: taps and directional swipes.
