@@ -39,3 +39,5 @@ Research references used to identify the original gameplay:
 - [ ] Wildlife AI, enemy tribes, raids, melee/ranged combat and defence.
 - [ ] Mission/campaign framework, tutorial and win/lose conditions.
 - [ ] Original art/audio commissioned or drawn for this remake, animation polish and device testing.
+
+The native project is developed on the `native-android-remake` branch so the legacy emulator APK workflow remains untouched.
