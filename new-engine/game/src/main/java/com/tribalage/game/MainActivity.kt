@@ -401,7 +401,7 @@ private class WorldRenderer {
     }
     private fun drawBuildPanel(c:Canvas,world:WorldModel) {
         p.color=0xe51b2921.toInt()
-        c.drawRoundRect(780f,84f,948f,376f,8f,8f,p)
+        c.drawRoundRect(780f,84f,948f,378f,8f,8f,p)
         p.color=0xffd7c18c.toInt();p.typeface=Typeface.DEFAULT_BOLD;p.textSize=12f
         c.drawText("СТРОИТЕЛЬСТВО",792f,100f,p)
         val labels=listOf(
@@ -434,7 +434,7 @@ private class WorldRenderer {
         p.color=0xffd7c18c.toInt();p.textSize=8.5f
         val tools=if("Орудия труда" in world.unlockedTechnologies)"✓" else "—"
         val storage=if("Хранение запасов" in world.unlockedTechnologies)"✓" else "—"
-        c.drawText("Орудия $tools · Хранилище $storage",792f,380f,p)
+        c.drawText("Орудия $tools · Хранилище $storage",792f,374f,p)
     }
 
     private fun drawResource(c:Canvas,x:Float,y:Float,label:String,value:Int,color:Int) {
