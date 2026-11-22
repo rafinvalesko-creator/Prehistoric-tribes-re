@@ -34,3 +34,4 @@ These systems are part of the clean-room prototype and are still being balanced.
 - Technology progression unlocks improved tool use (faster gathering) and expanded storage capacity.
 
 - Game state is serialized locally and restored automatically on launch; progress is autosaved during play and when the game surface closes.
+- Touchscreen action panel supports constructing huts, woodcamps, quarries and watchtowers, plus recruiting guards; actions validate costs and save immediately.
