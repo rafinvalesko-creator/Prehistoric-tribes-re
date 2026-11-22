@@ -38,6 +38,7 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
     @Volatile private var running=false
     private var loop:Thread?=null
     private var lastTick=System.nanoTime()
+    private var saveClock=0f
 
     init { holder.addCallback(this); isFocusable=true }
     override fun surfaceCreated(holder:SurfaceHolder) {
@@ -76,6 +77,11 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
             val dt=((now-lastTick)/1_000_000_000.0).toFloat().coerceIn(0f,0.05f)
             lastTick=now
             model.update(dt)
+            saveClock+=dt
+            if(saveClock>=10f) {
+                saveClock=0f
+                saveGame()
+            }
             val canvas=try{holder.lockCanvas()}catch(_:Exception){null}
             if(canvas!=null) {
                 renderer.draw(canvas,width,height,model)
