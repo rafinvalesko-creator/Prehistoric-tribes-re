@@ -50,6 +50,13 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
         if(event.action!=MotionEvent.ACTION_UP) return true
         val lx=(event.x-offsetX)/viewScale
         val ly=(event.y-offsetY)/viewScale
+        synchronized(model) {
+            if(model.isDefeated) {
+                model.restartGame()
+                saveGame()
+                return true
+            }
+        }
         if(lx in 780f..944f && ly in 55f..78f) {
             synchronized(model) {
                 model.paused=!model.paused
@@ -159,6 +166,7 @@ private class WorldRenderer {
         drawLighting(c,world)
         drawInterface(c,world)
         drawBuildPanel(c,world)
+        if(world.isDefeated) drawDefeat(c)
         c.restore()
     }
 
@@ -410,6 +418,20 @@ private class WorldRenderer {
         p.color=0xffd5c49c.toInt();p.textSize=10f;p.typeface=Typeface.DEFAULT
         c.drawText(if(world.paused) "ПАУЗА · НАЖМИТЕ" else "АВТОНОМНАЯ СИМУЛЯЦИЯ",790f,70f,p)
     }
+    private fun drawDefeat(c:Canvas) {
+        p.color=0xdd101713.toInt()
+        c.drawRoundRect(280f,145f,680f,285f,14f,14f,p)
+        p.color=0xffe5b07c.toInt()
+        p.typeface=Typeface.DEFAULT_BOLD
+        p.textSize=25f
+        c.drawText("ПОСЕЛЕНИЕ ПАЛО",365f,190f,p)
+        p.color=0xffeee0bd.toInt()
+        p.typeface=Typeface.DEFAULT
+        p.textSize=14f
+        c.drawText("Главный зал разрушен или племя погибло",320f,220f,p)
+        c.drawText("Коснитесь экрана, чтобы начать заново",337f,250f,p)
+    }
+
     private fun drawBuildPanel(c:Canvas,world:WorldModel) {
         p.color=0xe51b2921.toInt()
         c.drawRoundRect(780f,84f,948f,378f,8f,8f,p)
