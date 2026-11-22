@@ -52,6 +52,9 @@ class WorldModel {
     private var raidClock=95f
     private var growthClock=0f
     private var nextId=1
+    private var guardVolley=0f
+    var lastBattleText="Поселение спокойно"
+        private set
     private val rng=Random(38117)
 
     init {
@@ -141,6 +144,24 @@ class WorldModel {
         }
         updateWorkers(dt)
         updateRaiders(dt)
+        guardVolley+=dt
+        if(guardVolley>=0.85f) {
+            guardVolley=0f
+            val guards=people.filter{it.role==Role.GUARD && it.health>0f}
+            val target=enemies.minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
+            if(target!=null && guards.any{distance(it.x,it.y,target.x,target.y)<5.2f}) {
+                target.health-=18f
+                lastBattleText="Стража атакует налётчиков"
+                if(target.health<=0f) { stock.food+=4; stock.hides+=1; lastBattleText="Враг повержен: +4 еды, +1 шкура" }
+            }
+        }
+        val fallen=people.filter{it.health<=0f}
+        if(fallen.isNotEmpty()) {
+            population=max(0,population-fallen.size)
+            people.removeAll(fallen.toSet())
+            morale=(morale-fallen.size*9).coerceAtLeast(0)
+            lastBattleText="Потери племени: "+fallen.size
+        }
         growthClock+=dt
         if(growthClock>36f && population<28 && stock.food>100 && morale>55) {
             growthClock=0f
