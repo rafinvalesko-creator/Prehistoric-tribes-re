@@ -90,9 +90,8 @@ public final class JarTouchPatcher {
       }
       void addPointerReleased(ClassVisitor c) {
         MethodVisitor m = c.visitMethod(Opcodes.ACC_PROTECTED, "pointerReleased", "(II)V", null, null);
-        Label swipe = new Label(), vertical = new Label(), left = new Label(), up = new Label(), done = new Label();
+        Label swipe = new Label(), vertical = new Label(), right = new Label(), down = new Label(), dispatch = new Label(), done = new Label();
         m.visitCode();
-        // dx in local 3, dy in local 4
         m.visitVarInsn(Opcodes.ILOAD, 1); m.visitVarInsn(Opcodes.ALOAD,0);
         m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"touchStartX","I"); m.visitInsn(Opcodes.ISUB);
         m.visitVarInsn(Opcodes.ISTORE,3);
@@ -102,27 +101,26 @@ public final class JarTouchPatcher {
         m.visitVarInsn(Opcodes.ILOAD,3); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitVarInsn(Opcodes.ILOAD,4); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitInsn(Opcodes.IADD); m.visitIntInsn(Opcodes.BIPUSH,18); m.visitJumpInsn(Opcodes.IF_ICMPGT,swipe);
-        // tap -> primary confirm, release immediately (game handles action on release)
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
         m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
         m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyReleased","(I)V",false);
         m.visitJumpInsn(Opcodes.GOTO,done);
-        // swipe -> one directional key, held briefly by helper thread
         m.visitLabel(swipe);
         m.visitVarInsn(Opcodes.ILOAD,3); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitVarInsn(Opcodes.ILOAD,4); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitJumpInsn(Opcodes.IF_ICMPLE,vertical);
-        m.visitVarInsn(Opcodes.ILOAD,3); m.visitJumpInsn(Opcodes.IFGE,left);
-        m.visitIntInsn(Opcodes.BIPUSH,52); m.visitJumpInsn(Opcodes.GOTO,up);
-        m.visitLabel(left); m.visitIntInsn(Opcodes.BIPUSH,54); m.visitJumpInsn(Opcodes.GOTO,up);
+        m.visitVarInsn(Opcodes.ILOAD,3); m.visitJumpInsn(Opcodes.IFGE,right);
+        m.visitIntInsn(Opcodes.BIPUSH,52); m.visitJumpInsn(Opcodes.GOTO,dispatch);
+        m.visitLabel(right); m.visitIntInsn(Opcodes.BIPUSH,54); m.visitJumpInsn(Opcodes.GOTO,dispatch);
         m.visitLabel(vertical);
-        m.visitVarInsn(Opcodes.ILOAD,4); m.visitJumpInsn(Opcodes.IFGE,up);
-        m.visitIntInsn(Opcodes.BIPUSH,50); m.visitJumpInsn(Opcodes.GOTO,done);
-        m.visitLabel(up); m.visitIntInsn(Opcodes.BIPUSH,56);
+        m.visitVarInsn(Opcodes.ILOAD,4); m.visitJumpInsn(Opcodes.IFGE,down);
+        m.visitIntInsn(Opcodes.BIPUSH,50); m.visitJumpInsn(Opcodes.GOTO,dispatch);
+        m.visitLabel(down); m.visitIntInsn(Opcodes.BIPUSH,56);
+        m.visitLabel(dispatch);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitInsn(Opcodes.SWAP);
+        m.visitMethodInsn(Opcodes.INVOKESPECIAL,TARGET,"touchDispatch","(I)V",false);
         m.visitLabel(done);
-        // The swipe key is passed to the dispatch method at stack top unless tap branch.
-        // A separate merge label is required to keep branch stack balanced.
         m.visitInsn(Opcodes.RETURN);
         m.visitMaxs(0,0); m.visitEnd();
       }
