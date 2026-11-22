@@ -37,6 +37,7 @@ class WorldModel {
     var population=12
         private set
     val housingCapacity:Int get() = 5 + buildings.count { it.type==Structure.HUT } * 5
+    val isDefeated:Boolean get() = population<=0 || buildings.none { it.type==Structure.GREAT_HALL }
     val seasonName:String get() = listOf("Весна","Лето","Осень","Зима")[season.coerceIn(0,3)]
     var morale=86
         private set
@@ -124,7 +125,7 @@ class WorldModel {
     }
 
     fun update(dtRaw:Float) {
-        if(paused) return
+        if(paused || isDefeated) return
         val dt=dtRaw.coerceIn(0f,0.05f)
         elapsed+=dt
         firePulse+=dt
@@ -635,6 +636,8 @@ class WorldModel {
         for(i in 0 until 2) people += Villager(nextId++,Role.GUARD,12.4f+i*0.5f,9.4f,12.4f+i*0.5f,9.4f)
         for(i in 0 until 5) enemies += Villager(nextId++,Role.RAIDER,20f+(i%2)*0.6f,3.0f+(i/2)*0.7f,20f,3f)
     }
+
+    fun restartGame() { resetToNewGame() }
 
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
