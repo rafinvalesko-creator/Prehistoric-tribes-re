@@ -22,7 +22,7 @@ data class Villager(
     var tx:Float, var ty:Float, var taskNode:Int=-1,
     var work:Float=0f, var health:Float=100f, var carrying:Int=0,
     var walkingPhase:Float=0f, var taskBuildingId:Int=-1,
-    var manualOrderTime:Float=0f
+    var manualOrderTime:Float=0f, var holdPosition:Boolean=false
 )
 
 class WorldModel {
@@ -220,10 +220,15 @@ class WorldModel {
         for(p in people) {
             p.walkingPhase+=dt*7f
             if(p.manualOrderTime>0f) {
-                p.manualOrderTime=(p.manualOrderTime-dt).coerceAtLeast(0f)
-                if(distance(p.x,p.y,p.tx,p.ty)>0.22f) move(p,p.tx,p.ty,dt,if(p.role==Role.GUARD)0.92f else 0.76f)
-                else if(p.manualOrderTime<=0f) { p.taskNode=-1; p.taskBuildingId=-1 }
-                continue
+                if(p.holdPosition && p.role==Role.GUARD && p.health<35f) {
+                    p.holdPosition=false
+                    p.manualOrderTime=0f
+                } else {
+                    if(!p.holdPosition) p.manualOrderTime=(p.manualOrderTime-dt).coerceAtLeast(0f)
+                    if(distance(p.x,p.y,p.tx,p.ty)>0.22f) move(p,p.tx,p.ty,dt,if(p.role==Role.GUARD)0.92f else 0.76f)
+                    else if(p.manualOrderTime<=0f && !p.holdPosition) { p.taskNode=-1; p.taskBuildingId=-1 }
+                    if(p.holdPosition || p.manualOrderTime>0f) continue
+                }
             }
             if(p.role==Role.GUARD) {
                 if(p.health<35f) {
@@ -529,7 +534,8 @@ class WorldModel {
                 array.put(JSONObject().put("id",v.id).put("role",v.role.name).put("x",v.x).put("y",v.y)
                     .put("tx",v.tx).put("ty",v.ty).put("taskNode",v.taskNode).put("work",v.work)
                     .put("health",v.health).put("carrying",v.carrying).put("walkingPhase",v.walkingPhase)
-                    .put("taskBuildingId",v.taskBuildingId).put("manualOrderTime",v.manualOrderTime))
+                    .put("taskBuildingId",v.taskBuildingId).put("manualOrderTime",v.manualOrderTime)
+                    .put("holdPosition",v.holdPosition))
             }
             return array
         }
@@ -586,7 +592,7 @@ class WorldModel {
                     v.optInt("taskNode",-1),v.optDouble("work",0.0).toFloat(),
                     v.optDouble("health",100.0).toFloat().coerceIn(0f,100f),
                     v.optInt("carrying",0),v.optDouble("walkingPhase",0.0).toFloat(),
-                    v.optInt("taskBuildingId",-1),v.optDouble("manualOrderTime",0.0).toFloat().coerceIn(0f,60f)))
+                    v.optInt("taskBuildingId",-1),v.optDouble("manualOrderTime",0.0).toFloat().coerceIn(0f,60f),v.optBoolean("holdPosition",false)))
             }
             return result
         }
@@ -669,7 +675,7 @@ class WorldModel {
 
     fun restartGame() { resetToNewGame() }
 
-    fun selectOrOrder(x:Float,y:Float,group:Boolean=false):Boolean {
+    fun selectOrOrder(x:Float,y:Float,group:Boolean=false,hold:Boolean=false):Boolean {
         if(x<0f || y<0f || x>=width.toFloat() || y>=height.toFloat()) return false
         val nearby=people.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
         if(nearby!=null && distance(nearby.x,nearby.y,x,y)<0.82f) {
@@ -705,6 +711,7 @@ class WorldModel {
                 unit.tx=attackTarget.x
                 unit.ty=attackTarget.y
                 unit.manualOrderTime=25f
+                unit.holdPosition=false
                 unit.taskNode=-1
                 unit.taskBuildingId=-1
                 unit.work=0f
@@ -718,12 +725,13 @@ class WorldModel {
             val row=index/3
             unit.tx=(x+(col-1)*0.28f).coerceIn(0f,width-1f)
             unit.ty=(y+row*0.28f).coerceIn(0f,height-1f)
-            unit.manualOrderTime=18f
+            unit.manualOrderTime=if(hold) 60f else 18f
+            unit.holdPosition=hold
             unit.taskNode=-1
             unit.taskBuildingId=-1
             unit.work=0f
         }
-        lastBattleText=if(selected.size>1) "Приказ группе: перемещение" else "Приказ: перемещение"
+        lastBattleText=if(hold) "Приказ: занять оборону и удерживать позицию" else if(selected.size>1) "Приказ группе: перемещение" else "Приказ: перемещение"
         return true
     }
     fun addStructure(type:Structure,x:Float,y:Float) {
