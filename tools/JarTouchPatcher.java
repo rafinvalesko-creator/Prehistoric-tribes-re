@@ -101,6 +101,19 @@ public final class JarTouchPatcher {
         m.visitVarInsn(Opcodes.ILOAD,3); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitVarInsn(Opcodes.ILOAD,4); m.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Math","abs","(I)I",false);
         m.visitInsn(Opcodes.IADD); m.visitIntInsn(Opcodes.BIPUSH,18); m.visitJumpInsn(Opcodes.IF_ICMPGT,swipe);
+        // In the battlefield state, convert the tap position into the game's 22x16 map grid.
+        Label notMap = new Label();
+        m.visitVarInsn(Opcodes.ALOAD,0);
+        m.visitFieldInsn(Opcodes.GETFIELD,TARGET,"v","B");
+        m.visitInsn(Opcodes.ICONST_1);
+        m.visitJumpInsn(Opcodes.IF_ICMPNE,notMap);
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitVarInsn(Opcodes.ILOAD,1);
+        m.visitIntInsn(Opcodes.BIPUSH,22); m.visitInsn(Opcodes.IDIV); m.visitInsn(Opcodes.I2B);
+        m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"y","B");
+        m.visitVarInsn(Opcodes.ALOAD,0); m.visitVarInsn(Opcodes.ILOAD,2);
+        m.visitIntInsn(Opcodes.BIPUSH,16); m.visitInsn(Opcodes.IDIV); m.visitInsn(Opcodes.I2B);
+        m.visitFieldInsn(Opcodes.PUTFIELD,TARGET,"A","B");
+        m.visitLabel(notMap);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
         m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,TARGET,"keyPressed","(I)V",false);
         m.visitVarInsn(Opcodes.ALOAD,0); m.visitIntInsn(Opcodes.BIPUSH,53);
