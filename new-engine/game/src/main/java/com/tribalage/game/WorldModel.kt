@@ -367,12 +367,38 @@ class WorldModel {
         enemies.removeAll{it.health<=0f}
     }
 
+    private fun isWalkable(x:Float,y:Float):Boolean {
+        val tx=kotlin.math.round(x).toInt()
+        val ty=kotlin.math.round(y).toInt()
+        if(tx !in 0 until width || ty !in 0 until height) return false
+        return tiles[ty][tx].ground!=Ground.WATER
+    }
+
     private fun move(p:Villager,x:Float,y:Float,dt:Float,speed:Float=0.7f) {
         val dx=x-p.x; val dy=y-p.y
         val d=kotlin.math.sqrt(dx*dx+dy*dy)
         if(d<0.001f) return
         val step=min(d,speed*dt)
-        p.x+=dx/d*step; p.y+=dy/d*step
+        val nx=dx/d*step
+        val ny=dy/d*step
+        val directX=p.x+nx
+        val directY=p.y+ny
+        if(isWalkable(directX,directY)) {
+            p.x=directX
+            p.y=directY
+            return
+        }
+        // Slide along the riverbank instead of walking through water.
+        val xFirst=abs(dx)>=abs(dy)
+        val candidates=if(xFirst) arrayOf(p.x+nx to p.y,p.x to p.y+ny)
+            else arrayOf(p.x to p.y+ny,p.x+nx to p.y)
+        for(candidate in candidates) {
+            if(isWalkable(candidate.first,candidate.second)) {
+                p.x=candidate.first
+                p.y=candidate.second
+                return
+            }
+        }
     }
     private fun findNode(x:Float,y:Float,k:NodeKind):MapTile? =
         tiles.asSequence().flatMap { row -> row.asSequence() }.filter{it.node==k && it.amount>0}.minByOrNull{distance(x,y,it.x.toFloat(),it.y.toFloat())}
