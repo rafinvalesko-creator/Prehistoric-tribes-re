@@ -21,7 +21,8 @@ data class Villager(
     val id:Int, val role:Role, var x:Float, var y:Float,
     var tx:Float, var ty:Float, var taskNode:Int=-1,
     var work:Float=0f, var health:Float=100f, var carrying:Int=0,
-    var walkingPhase:Float=0f, var taskBuildingId:Int=-1
+    var walkingPhase:Float=0f, var taskBuildingId:Int=-1,
+    var manualOrderTime:Float=0f
 )
 
 class WorldModel {
@@ -53,6 +54,7 @@ class WorldModel {
     var firePulse=0f
         private set
     var selectedInfo="Племя Долины"
+    var selectedUnitId:Int=-1
     var paused=false
     private var dayClock=0f
     private var raidClock=95f
@@ -216,6 +218,12 @@ class WorldModel {
     private fun updateWorkers(dt:Float) {
         for(p in people) {
             p.walkingPhase+=dt*7f
+            if(p.manualOrderTime>0f) {
+                p.manualOrderTime=(p.manualOrderTime-dt).coerceAtLeast(0f)
+                if(distance(p.x,p.y,p.tx,p.ty)>0.22f) move(p,p.tx,p.ty,dt,if(p.role==Role.GUARD)0.92f else 0.76f)
+                else if(p.manualOrderTime<=0f) { p.taskNode=-1; p.taskBuildingId=-1 }
+                continue
+            }
             if(p.role==Role.GUARD) {
                 if(p.health<35f) {
                     val hall=buildings.firstOrNull { it.type==Structure.GREAT_HALL }
@@ -520,7 +528,7 @@ class WorldModel {
                 array.put(JSONObject().put("id",v.id).put("role",v.role.name).put("x",v.x).put("y",v.y)
                     .put("tx",v.tx).put("ty",v.ty).put("taskNode",v.taskNode).put("work",v.work)
                     .put("health",v.health).put("carrying",v.carrying).put("walkingPhase",v.walkingPhase)
-                    .put("taskBuildingId",v.taskBuildingId))
+                    .put("taskBuildingId",v.taskBuildingId).put("manualOrderTime",v.manualOrderTime))
             }
             return array
         }
@@ -577,7 +585,7 @@ class WorldModel {
                     v.optInt("taskNode",-1),v.optDouble("work",0.0).toFloat(),
                     v.optDouble("health",100.0).toFloat().coerceIn(0f,100f),
                     v.optInt("carrying",0),v.optDouble("walkingPhase",0.0).toFloat(),
-                    v.optInt("taskBuildingId",-1)))
+                    v.optInt("taskBuildingId",-1),v.optDouble("manualOrderTime",0.0).toFloat().coerceIn(0f,60f)))
             }
             return result
         }
@@ -657,6 +665,34 @@ class WorldModel {
 
     fun restartGame() { resetToNewGame() }
 
+    fun selectOrOrder(x:Float,y:Float):Boolean {
+        if(x<0f || y<0f || x>=width.toFloat() || y>=height.toFloat()) return false
+        val nearby=people.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
+        if(nearby!=null && distance(nearby.x,nearby.y,x,y)<0.82f) {
+            selectedUnitId=nearby.id
+            selectedInfo=when(nearby.role) {
+                Role.GUARD -> "Стражник"
+                Role.BUILDER -> "Строитель"
+                Role.HUNTER -> "Охотник"
+                else -> "Собиратель"
+            }+" · здоровье ${nearby.health.toInt()}"
+            return true
+        }
+        val selected=people.firstOrNull{it.id==selectedUnitId && it.health>0f}
+        if(selected!=null && isWalkable(x,y)) {
+            selected.tx=x.coerceIn(0f,width-1f)
+            selected.ty=y.coerceIn(0f,height-1f)
+            selected.manualOrderTime=18f
+            selected.taskNode=-1
+            selected.taskBuildingId=-1
+            selected.work=0f
+            lastBattleText="Приказ: перемещение отряда"
+            return true
+        }
+        selectedUnitId=-1
+        selectedInfo="Племя Долины"
+        return false
+    }
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
         if(type==Structure.HUT) lastBattleText="Построено новое жильё"
