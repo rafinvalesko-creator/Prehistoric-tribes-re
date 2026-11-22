@@ -2,11 +2,6 @@ name: Build native Android remake
 
 on:
   workflow_dispatch:
-  push:
-    branches: [native-android-remake]
-    paths:
-      - "native-remake/**"
-      - ".github/workflows/build-native-remake.yml"
 
 jobs:
   build:
