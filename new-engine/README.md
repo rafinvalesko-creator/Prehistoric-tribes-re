@@ -41,3 +41,7 @@ These systems are part of the clean-room prototype and are still being balanced.
 - Стражники автоматически преследуют ближайших налётчиков в радиусе обнаружения и возвращаются к поселению, если врагов рядом нет.
 - Налётчики выбирают ближайший целый участок частокола, идут к нему и атакуют его; после разрушения переходят к следующему участку, а затем к постройкам.
 - Повреждённые участки частокола отображают шкалу прочности и могут быть восстановлены строителем.
+
+
+Combat behavior:
+- Injured guards below 35 health retreat to the great hall and recover gradually before returning to patrol.
