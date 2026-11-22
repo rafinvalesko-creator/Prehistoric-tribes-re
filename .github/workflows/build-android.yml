@@ -74,7 +74,9 @@ jobs:
 
       - name: Build MIDlet debug APK
         working-directory: jlmod
-        run: ./gradlew --no-daemon :app:assembleMidletDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleMidletDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
