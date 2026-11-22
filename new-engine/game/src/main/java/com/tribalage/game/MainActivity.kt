@@ -41,15 +41,35 @@ private class TribalWorldView(context: android.content.Context) : SurfaceView(co
 
     init { holder.addCallback(this); isFocusable=true }
     override fun surfaceCreated(holder:SurfaceHolder) {
+        loadSavedGame()
         running=true
         lastTick=System.nanoTime()
         loop=Thread(this,"tribal-world-loop").also{it.start()}
     }
     override fun surfaceChanged(holder:SurfaceHolder,format:Int,width:Int,height:Int) {}
     override fun surfaceDestroyed(holder:SurfaceHolder) {
+        saveGame()
         running=false
         try { loop?.join(700) } catch (_:InterruptedException) {}
     }
+    private fun saveGame() {
+        try {
+            context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
+                .edit().putString("world",model.saveState()).apply()
+        } catch (_:Exception) {}
+    }
+
+    private fun loadSavedGame() {
+        try {
+            val data=context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
+                .getString("world",null)
+            if(data!=null && !model.loadState(data)) {
+                context.getSharedPreferences("tribal_age_save",android.content.Context.MODE_PRIVATE)
+                    .edit().remove("world").apply()
+            }
+        } catch (_:Exception) {}
+    }
+
     override fun run() {
         while(running) {
             val now=System.nanoTime()
