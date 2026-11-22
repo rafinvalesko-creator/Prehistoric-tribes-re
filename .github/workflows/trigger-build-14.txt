@@ -1,1 +1,1 @@
-Touch selection without battlefield hand; verified bytecode field offsets; landscape.
+Final direct-touch build: hide hand pointer; map tap uses integer viewport offsets; landscape; no virtual controls.
