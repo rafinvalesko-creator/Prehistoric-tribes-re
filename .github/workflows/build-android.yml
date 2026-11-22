@@ -1,0 +1,77 @@
+name: Build Prehistoric Tribes Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/trigger-build.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out game repository
+        uses: actions/checkout@v4
+
+      - name: Check out JL-Mod runtime
+        uses: actions/checkout@v4
+        with:
+          repository: woesss/JL-Mod
+          ref: dev
+          path: jlmod
+          submodules: recursive
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: jlmod/**/*.gradle*
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;22.1.7171670"
+
+      - name: Prepare MIDlet source and resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f original/prehistoric-tribes-0.1.38.jar
+          mkdir -p jlmod/app/src/midlet/java jlmod/app/src/midlet/resources/MIDLET-META-INF
+          cp decompiled/*.java jlmod/app/src/midlet/java/
+          unzip -oq original/prehistoric-tribes-0.1.38.jar -d /tmp/prehistoric-jar
+          cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
+          find jlmod/app/src/midlet/resources -type f -name '*.class' -delete
+          rm -rf jlmod/app/src/midlet/resources/META-INF
+          if [ -f /tmp/prehistoric-jar/META-INF/MANIFEST.MF ]; then
+            cp /tmp/prehistoric-jar/META-INF/MANIFEST.MF jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          else
+            echo "Original MIDlet manifest is missing" >&2
+            exit 1
+          fi
+          sed -i 's/^MIDlet-Name:.*/MIDlet-Name: Prehistoric Tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          sed -i 's/^MIDlet-1:.*/MIDlet-1: Prehistoric Tribes, , tribes/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          sed -i 's/^MIDlet-Version:.*/MIDlet-Version: 0.1.38/' jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+          echo "MIDlet source files: $(find jlmod/app/src/midlet/java -name '*.java' | wc -l)"
+          echo "Resource files: $(find jlmod/app/src/midlet/resources -type f | wc -l)"
+          cat jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
+
+      - name: Set application project name
+        run: sed -i 's/rootProject.name = "JL-Mod"/rootProject.name = "Prehistoric-Tribes"/' jlmod/settings.gradle.kts
+
+      - name: Build MIDlet debug APK
+        working-directory: jlmod
+        run: ./gradlew --no-daemon :app:assembleMidletDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: prehistoric-tribes-android-debug
+          path: jlmod/app/build/outputs/apk/midlet/debug/*.apk
+          if-no-files-found: error
