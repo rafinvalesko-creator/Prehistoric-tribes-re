@@ -173,8 +173,10 @@ class WorldModel {
         if(guardVolley>=0.85f) {
             guardVolley=0f
             val guards=people.filter{it.role==Role.GUARD && it.health>0f}
-            val target=enemies.filter{it.health>0f}
-                .minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
+            val focusedId=guards.firstOrNull{it.focusTargetId>=0}?.focusTargetId ?: -1
+            val target=(if(focusedId>=0) enemies.firstOrNull{it.id==focusedId && it.health>0f} else null)
+                ?: enemies.filter{it.health>0f}
+                    .minByOrNull{enemy -> guards.minOfOrNull{distance(it.x,it.y,enemy.x,enemy.y)} ?: 999f}
             if(target!=null && guards.any{distance(it.x,it.y,target.x,target.y)<5.2f}) {
                 target.health-=18f
                 lastBattleText="Стража атакует налётчиков"
