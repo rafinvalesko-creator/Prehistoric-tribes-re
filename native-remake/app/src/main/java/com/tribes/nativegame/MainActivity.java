@@ -53,7 +53,13 @@ public class MainActivity extends Activity {
             super(c); prefs=c.getSharedPreferences("tribe_save",0);
             setLayerType(View.LAYER_TYPE_SOFTWARE,null);
             load();
-            if (people.isEmpty()) newGame();
+            if (people.isEmpty()) newGame(); else if (nodes.isEmpty()) seedNodes();
+        }
+        void seedNodes() {
+            nodes.add(new Node(210,170,0,90)); nodes.add(new Node(300,490,0,75)); nodes.add(new Node(760,190,0,85));
+            nodes.add(new Node(160,350,1,130)); nodes.add(new Node(840,330,1,160)); nodes.add(new Node(900,490,1,100));
+            nodes.add(new Node(780,470,2,100)); nodes.add(new Node(1010,250,2,130));
+            nodes.add(new Node(1050,540,3,110)); nodes.add(new Node(1140,560,3,90)); nodes.add(new Node(930,170,4,80));
         }
         void newGame() {
             people.clear(); nodes.clear(); buildings.clear();
