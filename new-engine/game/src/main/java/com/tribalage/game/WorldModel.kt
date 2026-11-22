@@ -55,6 +55,7 @@ class WorldModel {
         private set
     var selectedInfo="Племя Долины"
     var selectedUnitId:Int=-1
+    val selectedUnitIds=mutableSetOf<Int>()
     var paused=false
     private var dayClock=0f
     private var raidClock=95f
@@ -620,6 +621,9 @@ class WorldModel {
         raidClock=95f
         growthClock=0f
         nextId=1
+        selectedUnitId=-1
+        selectedUnitIds.clear()
+        selectedInfo="Племя Долины"
         guardVolley=0f
         missionStage=0
         technologyClock=0f
@@ -665,33 +669,58 @@ class WorldModel {
 
     fun restartGame() { resetToNewGame() }
 
-    fun selectOrOrder(x:Float,y:Float):Boolean {
+    fun selectOrOrder(x:Float,y:Float,group:Boolean=false):Boolean {
         if(x<0f || y<0f || x>=width.toFloat() || y>=height.toFloat()) return false
         val nearby=people.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
         if(nearby!=null && distance(nearby.x,nearby.y,x,y)<0.82f) {
             selectedUnitId=nearby.id
-            selectedInfo=when(nearby.role) {
-                Role.GUARD -> "Стражник"
-                Role.BUILDER -> "Строитель"
-                Role.HUNTER -> "Охотник"
-                else -> "Собиратель"
-            }+" · здоровье ${nearby.health.toInt()}"
+            selectedUnitIds.clear()
+            if(group) people.filter{it.health>0f && it.role==nearby.role}.forEach{selectedUnitIds.add(it.id)}
+            else selectedUnitIds.add(nearby.id)
+            val count=selectedUnitIds.size
+            selectedInfo=(when(nearby.role) {
+                Role.GUARD -> "Стража"
+                Role.BUILDER -> "Строители"
+                Role.HUNTER -> "Охотники"
+                else -> "Собиратели"
+            })+" · $count · HP ${nearby.health.toInt()}"
             return true
         }
-        val selected=people.firstOrNull{it.id==selectedUnitId && it.health>0f}
-        if(selected!=null && isWalkable(x,y)) {
-            selected.tx=x.coerceIn(0f,width-1f)
-            selected.ty=y.coerceIn(0f,height-1f)
-            selected.manualOrderTime=18f
-            selected.taskNode=-1
-            selected.taskBuildingId=-1
-            selected.work=0f
-            lastBattleText="Приказ: перемещение отряда"
+        val selected=people.filter{it.health>0f && it.id in selectedUnitIds}
+        if(selected.isEmpty()) {
+            selectedUnitId=-1
+            selectedUnitIds.clear()
+            selectedInfo="Племя Долины"
+            return false
+        }
+        val enemy=enemies.filter{it.health>0f}.minByOrNull{distance(it.x,it.y,x,y)}
+        val attackTarget=enemy?.takeIf{distance(it.x,it.y,x,y)<1.0f}
+        if(attackTarget!=null && selected.any{it.role==Role.GUARD}) {
+            val guards=selected.filter{it.role==Role.GUARD}
+            guards.forEach { unit ->
+                unit.tx=attackTarget.x
+                unit.ty=attackTarget.y
+                unit.manualOrderTime=25f
+                unit.taskNode=-1
+                unit.taskBuildingId=-1
+                unit.work=0f
+            }
+            lastBattleText="Приказ стражe: атаковать налётчика"
             return true
         }
-        selectedUnitId=-1
-        selectedInfo="Племя Долины"
-        return false
+        if(!isWalkable(x,y)) return false
+        selected.forEachIndexed { index,unit ->
+            val col=index%3
+            val row=index/3
+            unit.tx=(x+(col-1)*0.28f).coerceIn(0f,width-1f)
+            unit.ty=(y+row*0.28f).coerceIn(0f,height-1f)
+            unit.manualOrderTime=18f
+            unit.taskNode=-1
+            unit.taskBuildingId=-1
+            unit.work=0f
+        }
+        lastBattleText=if(selected.size>1) "Приказ группе: перемещение" else "Приказ: перемещение"
+        return true
     }
     fun addStructure(type:Structure,x:Float,y:Float) {
         buildings+=StructureState(nextId++,type,x,y)
