@@ -91,6 +91,9 @@ jobs:
           s = s.replace('                    b16 = (byte) (b17 + 1);\n                }\n            }\n            b12 =', '                    b16 = (byte) (b17 + 1);\n                } else {\n                    break;\n                }\n            }\n            b12 =')
           s = s.replace('        if (recordStoreOpenRecordStore != null) {\n            recordStoreOpenRecordStore.closeRecordStore();\n        }', '        if (recordStoreOpenRecordStore != null) {\n            try { recordStoreOpenRecordStore.closeRecordStore(); } catch (Exception ignored) { }\n        }')
           s = s.replace('            this.f150a = new a("audio/midi");', '            try { this.f150a = new a("audio/midi"); } catch (Exception ignored) { this.f150a = null; }')
+          if 'this.f150a.a(this.f146e);' not in s:
+              raise SystemExit('Expected optional MIDI playback call not found')
+          s = s.replace('        this.f150a.a(this.f146e);', '        if (this.f150a != null) {\n            this.f150a.a(this.f146e);\n        }', 1)
           p.write_text(s)
           p = root / 'd.java'
           s = p.read_text().replace('g.', 'defpackage.g.')
@@ -128,7 +131,8 @@ jobs:
           chmod -R u+rwX /tmp/prehistoric-jar
           cp -a /tmp/prehistoric-jar/. jlmod/app/src/midlet/resources/
           find jlmod/app/src/midlet/resources -type f -name '*.class' -delete
-          rm -rf jlmod/app/src/midlet/resources/META-INF
+          # Keep META-INF/MANIFEST.MF: the original game reads it as a resource at runtime.
+          find jlmod/app/src/midlet/resources/META-INF -type f \\( -iname '*.SF' -o -iname '*.RSA' -o -iname '*.DSA' -o -iname '*.EC' \\) -delete 2>/dev/null || true
           if [ -f /tmp/prehistoric-jar/META-INF/MANIFEST.MF ]; then
             cp /tmp/prehistoric-jar/META-INF/MANIFEST.MF jlmod/app/src/midlet/resources/MIDLET-META-INF/MANIFEST.MF
           else
